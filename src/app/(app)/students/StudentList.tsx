@@ -71,6 +71,13 @@ export function StudentList({
                     className={inputClass}
                   />
                 </Field>
+                <Field label="Parent name">
+                  <input
+                    name="parent_name"
+                    defaultValue={student.parent_name ?? ""}
+                    className={inputClass}
+                  />
+                </Field>
                 <Field label="Parent contact">
                   <input
                     name="parent_contact"

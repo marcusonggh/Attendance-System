@@ -9,6 +9,7 @@ export async function addStudent(
   formData: FormData,
 ): Promise<ActionResult> {
   const name = String(formData.get("name") ?? "").trim();
+  const parentName = String(formData.get("parent_name") ?? "").trim();
   const parentContact = String(formData.get("parent_contact") ?? "").trim();
 
   if (!name) return { success: false, message: "Name is required." };
@@ -16,6 +17,7 @@ export async function addStudent(
   const supabase = await createClient();
   const { error } = await supabase.from("students").insert({
     name,
+    parent_name: parentName || null,
     parent_contact: parentContact || null,
   });
 
@@ -31,6 +33,7 @@ export async function updateStudent(
 ): Promise<ActionResult> {
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
+  const parentName = String(formData.get("parent_name") ?? "").trim();
   const parentContact = String(formData.get("parent_contact") ?? "").trim();
 
   if (!id || !name) return { success: false, message: "Name is required." };
@@ -40,6 +43,7 @@ export async function updateStudent(
     .from("students")
     .update({
       name,
+      parent_name: parentName || null,
       parent_contact: parentContact || null,
     })
     .eq("id", id);
