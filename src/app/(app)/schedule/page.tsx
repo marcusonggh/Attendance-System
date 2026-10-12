@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { CalendarPlus, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -75,6 +76,7 @@ export default async function SchedulePage() {
   const students = (studentsData ?? []) as Student[];
   const enrollments = (enrollmentData ?? []) as Enrollment[];
   const studentNameById = new Map(students.map((s) => [s.id, s.name]));
+  const todayStr = format(new Date(), "yyyy-MM-dd");
 
   return (
     <div className="space-y-10">
@@ -136,6 +138,18 @@ export default async function SchedulePage() {
                     </option>
                   ))}
                 </select>
+              </Field>
+              <Field label="Start date">
+                <input
+                  type="date"
+                  name="start_date"
+                  defaultValue={todayStr}
+                  required
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="End date (optional)">
+                <input type="date" name="end_date" className={inputClass} />
               </Field>
               <Field label="Location" className="col-span-2">
                 <input
@@ -237,6 +251,23 @@ export default async function SchedulePage() {
                         </option>
                       ))}
                     </select>
+                  </Field>
+                  <Field label="Start date">
+                    <input
+                      type="date"
+                      name="start_date"
+                      defaultValue={enrollment.start_date}
+                      required
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field label="End date (optional)">
+                    <input
+                      type="date"
+                      name="end_date"
+                      defaultValue={enrollment.end_date ?? ""}
+                      className={inputClass}
+                    />
                   </Field>
                   <Field label="Location" className="col-span-2">
                     <input

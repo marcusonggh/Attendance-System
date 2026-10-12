@@ -59,3 +59,24 @@ export function formatTimeRange(
 export function formatDayTime(enrollment: Enrollment): string {
   return `${WEEKDAY_LABELS[enrollment.day_of_week]} ${formatTimeRange(enrollment.start_time, enrollment.duration_hours)}`;
 }
+
+// Whether this enrollment's weekly class actually falls on this date —
+// matching day_of_week isn't enough once the class has a start/end date.
+export function isScheduledOn(enrollment: Enrollment, dateStr: string): boolean {
+  if (dateStr < enrollment.start_date) return false;
+  if (enrollment.end_date && dateStr > enrollment.end_date) return false;
+  return true;
+}
+
+// Whether this enrollment should be billed for a given month — it must
+// have started by the end of the month, and not have ended before the
+// month began.
+export function overlapsMonth(
+  enrollment: Enrollment,
+  monthStartStr: string,
+  monthEndStr: string,
+): boolean {
+  if (enrollment.start_date > monthEndStr) return false;
+  if (enrollment.end_date && enrollment.end_date < monthStartStr) return false;
+  return true;
+}

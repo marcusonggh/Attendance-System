@@ -12,7 +12,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { ClassSession, Enrollment, Student } from "@/lib/types";
-import { formatTimeRange, groupSizeLabel, subjectLabel } from "@/lib/rateCard";
+import { formatTimeRange, groupSizeLabel, isScheduledOn, subjectLabel } from "@/lib/rateCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/Field";
@@ -110,7 +110,7 @@ export default async function AttendanceMonthPage({
           const isToday = dateStr === todayStr;
 
           const scheduledToday = enrollments.filter(
-            (e) => e.day_of_week === dayOfWeek,
+            (e) => e.day_of_week === dayOfWeek && isScheduledOn(e, dateStr),
           );
           const scheduledIds = new Set(scheduledToday.map((e) => e.id));
           const daySessions = sessions.filter((s) => s.date === dateStr);

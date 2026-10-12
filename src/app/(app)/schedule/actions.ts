@@ -28,6 +28,17 @@ function parseStartTime(formData: FormData): string | null {
   return `${hour}:${minute}`;
 }
 
+// end_date is optional ("" means recurs indefinitely); start_date is required.
+function parseDateRange(
+  formData: FormData,
+): { startDate: string; endDate: string | null } | null {
+  const startDate = String(formData.get("start_date") ?? "").trim();
+  const endDate = String(formData.get("end_date") ?? "").trim();
+  if (!startDate) return null;
+  if (endDate && endDate < startDate) return null;
+  return { startDate, endDate: endDate || null };
+}
+
 export async function addEnrollment(
   _prev: ActionResult,
   formData: FormData,
@@ -40,6 +51,7 @@ export async function addEnrollment(
   const startTime = parseStartTime(formData);
   const durationHours = parseDuration(formData);
   const location = String(formData.get("location") ?? "").trim();
+  const dateRange = parseDateRange(formData);
 
   if (
     !studentId ||
@@ -50,7 +62,8 @@ export async function addEnrollment(
     dayOfWeek < 0 ||
     dayOfWeek > 6 ||
     startTime === null ||
-    durationHours === null
+    durationHours === null ||
+    dateRange === null
   ) {
     return { success: false, message: "Fill in all enrollment details." };
   }
@@ -65,6 +78,8 @@ export async function addEnrollment(
     start_time: startTime,
     duration_hours: durationHours,
     location,
+    start_date: dateRange.startDate,
+    end_date: dateRange.endDate,
   });
 
   if (error) return { success: false, message: "Failed to add enrollment." };
@@ -85,6 +100,7 @@ export async function updateEnrollment(
   const startTime = parseStartTime(formData);
   const durationHours = parseDuration(formData);
   const location = String(formData.get("location") ?? "").trim();
+  const dateRange = parseDateRange(formData);
 
   if (
     !id ||
@@ -95,7 +111,8 @@ export async function updateEnrollment(
     dayOfWeek < 0 ||
     dayOfWeek > 6 ||
     startTime === null ||
-    durationHours === null
+    durationHours === null ||
+    dateRange === null
   ) {
     return { success: false, message: "Fill in all enrollment details." };
   }
@@ -111,6 +128,8 @@ export async function updateEnrollment(
       start_time: startTime,
       duration_hours: durationHours,
       location,
+      start_date: dateRange.startDate,
+      end_date: dateRange.endDate,
     })
     .eq("id", id);
 

@@ -1,15 +1,16 @@
 export interface Student {
   id: string;
   name: string;
+  parent_name: string | null;
   parent_contact: string | null;
   active: boolean;
   created_at: string;
 }
 
 export const SUBJECTS = [
-  { value: "mandarin", label: "华语 (Mandarin)" },
-  { value: "math", label: "数学 (Math)" },
-  { value: "science", label: "科学 (Science)" },
+  { value: "mandarin", label: "Mandarin" },
+  { value: "math", label: "Math" },
+  { value: "science", label: "Science" },
   { value: "english", label: "English" },
   { value: "bahasa", label: "Bahasa" },
 ] as const;
@@ -36,6 +37,8 @@ export interface Enrollment {
   start_time: string;
   duration_hours: DurationHours;
   location: string;
+  start_date: string;
+  end_date: string | null;
   active: boolean;
   created_at: string;
 }
