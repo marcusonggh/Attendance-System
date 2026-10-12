@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import { getEffectiveRate } from "@/lib/rateCard";
+import { getEffectiveRate, overlapsMonth } from "@/lib/rateCard";
 import type {
   ActionResult,
   ClassSession,
@@ -181,19 +181,21 @@ export async function finalizeAllInvoices(
       (s) => s.enrollment_id === enrollment.id,
     ).length;
 
-    // Skip a deactivated enrollment entirely if it has neither attendance
-    // nor an existing invoice for this month — nothing to bill.
-    if (
-      !enrollment.active &&
-      sessionsAttended === 0 &&
-      !existingByEnrollment.has(enrollment.id)
-    ) {
+    const existingId = existingByEnrollment.get(enrollment.id);
+
+    // Skip an enrollment that doesn't overlap this month at all (unless it
+    // was already invoiced before its dates changed), and skip a
+    // deactivated enrollment with neither attendance nor an existing
+    // invoice for this month — nothing to bill in either case.
+    if (!overlapsMonth(enrollment, monthStart, monthEnd) && !existingId) {
+      continue;
+    }
+    if (!enrollment.active && sessionsAttended === 0 && !existingId) {
       continue;
     }
 
     const amountOwed = getEffectiveRate(studentRates, rateCard, enrollment);
 
-    const existingId = existingByEnrollment.get(enrollment.id);
     if (existingId) {
       toUpdate.push({
         id: existingId,

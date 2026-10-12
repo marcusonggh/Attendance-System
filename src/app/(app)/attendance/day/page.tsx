@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { ClassSession, Enrollment, Student } from "@/lib/types";
-import { formatDayTime, groupSizeLabel, subjectLabel } from "@/lib/rateCard";
+import { formatDayTime, groupSizeLabel, isScheduledOn, subjectLabel } from "@/lib/rateCard";
 import {
   markAttendance,
   markAllPresent,
@@ -61,7 +61,7 @@ export default async function AttendanceDayPage({
   const activeEnrollments = allEnrollments.filter((e) => e.active);
 
   const scheduledToday = activeEnrollments.filter(
-    (e) => e.day_of_week === dayOfWeek,
+    (e) => e.day_of_week === dayOfWeek && isScheduledOn(e, date),
   );
   const scheduledIds = new Set(scheduledToday.map((e) => e.id));
   const extraFromSessions = allEnrollments.filter(

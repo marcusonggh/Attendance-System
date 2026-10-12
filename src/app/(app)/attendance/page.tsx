@@ -10,7 +10,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { ClassSession, Enrollment, RateCard, Student } from "@/lib/types";
-import { formatTimeRange, groupSizeLabel, subjectLabel } from "@/lib/rateCard";
+import { formatTimeRange, groupSizeLabel, isScheduledOn, subjectLabel } from "@/lib/rateCard";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -115,7 +115,7 @@ export default async function AttendanceCalendarPage({
           const isToday = dateStr === todayStr;
 
           const scheduledToday = activeEnrollments.filter(
-            (e) => e.day_of_week === dayOfWeek,
+            (e) => e.day_of_week === dayOfWeek && isScheduledOn(e, dateStr),
           );
           const scheduledIds = new Set(scheduledToday.map((e) => e.id));
           const daySessions = sessions.filter((s) => s.date === dateStr);

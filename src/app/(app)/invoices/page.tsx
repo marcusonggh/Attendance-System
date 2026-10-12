@@ -18,7 +18,7 @@ import type {
   Student,
   StudentRate,
 } from "@/lib/types";
-import { getEffectiveRate, subjectLabel } from "@/lib/rateCard";
+import { getEffectiveRate, overlapsMonth, subjectLabel } from "@/lib/rateCard";
 import {
   finalizeInvoice,
   togglePaid,
@@ -111,15 +111,19 @@ export default async function InvoicesPage({
   const rows = enrollments
     .map((enrollment) => {
       const student = studentById.get(enrollment.student_id);
+      const inRange = overlapsMonth(enrollment, monthStartStr, monthEndStr);
       const liveSessionsAttended = sessions.filter(
         (s) => s.enrollment_id === enrollment.id,
       ).length;
-      const liveAmountOwed = getEffectiveRate(studentRates, rateCard, enrollment);
+      const liveAmountOwed = inRange
+        ? getEffectiveRate(studentRates, rateCard, enrollment)
+        : 0;
       const invoice = invoices.find((inv) => inv.enrollment_id === enrollment.id);
 
       return {
         enrollment,
         student,
+        inRange,
         // What's shown and what a *new* finalize submits — always current.
         liveSessionsAttended,
         liveAmountOwed,
@@ -133,6 +137,10 @@ export default async function InvoicesPage({
       };
     })
     .filter((row): row is typeof row & { student: Student } => !!row.student)
+    // Only bill a month the enrollment actually overlaps — unless it was
+    // already invoiced before its dates changed, which stays visible for
+    // the audit trail.
+    .filter((row) => row.inRange || row.invoice)
     // A deactivated enrollment only shows up for a month where it still has
     // something to bill: existing attendance not yet invoiced, or an invoice
     // already finalized. Once neither applies, it drops off naturally.

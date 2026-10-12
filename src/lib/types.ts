@@ -37,6 +37,8 @@ export interface Enrollment {
   start_time: string;
   duration_hours: DurationHours;
   location: string;
+  start_date: string;
+  end_date: string | null;
   active: boolean;
   created_at: string;
 }
