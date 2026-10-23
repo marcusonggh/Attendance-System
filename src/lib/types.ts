@@ -101,5 +101,7 @@ export const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => {
 
 export const MINUTE_OPTIONS = [
   { value: "00", label: ":00" },
+  { value: "15", label: ":15" },
   { value: "30", label: ":30" },
+  { value: "45", label: ":45" },
 ];
