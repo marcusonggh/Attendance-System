@@ -1,21 +1,34 @@
-import { endOfMonth, format, parseISO } from "date-fns";
+import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import type { ClassSession, Enrollment, Invoice, RateCard, Student, StudentRate } from "@/lib/types";
-import { formatDayTime, getEffectiveRate, groupSizeLabel, subjectLabel } from "@/lib/rateCard";
+import type {
+  ClassSession,
+  Enrollment,
+  Invoice,
+  RateCard,
+  Student,
+  StudentRate,
+} from "@/lib/types";
+import {
+  formatDayTime,
+  getEffectiveRate,
+  groupSizeLabel,
+  overlapsMonth,
+  subjectLabel,
+} from "@/lib/rateCard";
 import { Badge } from "@/components/ui/Badge";
 import PrintButton from "./PrintButton";
 
 export default async function PrintInvoicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ enrollment?: string; month?: string }>;
+  searchParams: Promise<{ student?: string; month?: string }>;
 }) {
-  const { enrollment: enrollmentId, month } = await searchParams;
+  const { student: studentId, month } = await searchParams;
 
-  if (!enrollmentId || !month) {
+  if (!studentId || !month) {
     return (
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        Missing enrollment or month.
+        Missing student or month.
       </p>
     );
   }
@@ -23,41 +36,29 @@ export default async function PrintInvoicePage({
   const supabase = await createClient();
 
   const [
+    { data: studentData },
     { data: enrollmentData },
     { data: invoiceData },
     { data: rateData },
     { data: studentRateData },
   ] = await Promise.all([
-    supabase.from("enrollments").select("*").eq("id", enrollmentId).single(),
+    supabase.from("students").select("*").eq("id", studentId).single(),
+    supabase.from("enrollments").select("*").eq("student_id", studentId),
     supabase
       .from("invoices")
       .select("*")
-      .eq("enrollment_id", enrollmentId)
+      .eq("student_id", studentId)
       .eq("year_month", month)
       .maybeSingle(),
     supabase.from("rate_card").select("*"),
     supabase.from("student_rates").select("*"),
   ]);
 
-  const enrollment = enrollmentData as Enrollment | null;
+  const student = studentData as Student | null;
+  const enrollments = (enrollmentData ?? []) as Enrollment[];
   let invoice = invoiceData as Invoice | null;
   const rateCard = (rateData ?? []) as RateCard[];
   const studentRates = (studentRateData ?? []) as StudentRate[];
-
-  if (!enrollment) {
-    return (
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        Enrollment not found.
-      </p>
-    );
-  }
-
-  const { data: studentData } = await supabase
-    .from("students")
-    .select("*")
-    .eq("id", enrollment.student_id)
-    .single();
-  const student = studentData as Student | null;
 
   if (!student) {
     return (
@@ -67,26 +68,37 @@ export default async function PrintInvoicePage({
     );
   }
 
-  const monthStart = `${month}-01`;
-  const monthEnd = format(endOfMonth(parseISO(monthStart)), "yyyy-MM-dd");
+  const monthStartDate = startOfMonth(parseISO(`${month}-01`));
+  const monthStart = format(monthStartDate, "yyyy-MM-dd");
+  const monthEnd = format(endOfMonth(monthStartDate), "yyyy-MM-dd");
+
+  const relevant = enrollments.filter((e) => overlapsMonth(e, monthStart, monthEnd));
+  const activeRelevant = relevant.filter((e) => e.active);
+
   const { data: sessionRows } = await supabase
     .from("sessions")
     .select("*")
-    .eq("enrollment_id", enrollmentId)
     .eq("status", "present")
     .gte("date", monthStart)
     .lte("date", monthEnd);
   const sessions = (sessionRows ?? []) as ClassSession[];
+  const sessionsAttended = sessions.filter((s) =>
+    relevant.some((e) => e.id === s.enrollment_id),
+  ).length;
 
-  const rate = getEffectiveRate(studentRates, rateCard, enrollment);
+  const breakdown = activeRelevant.map((e) => ({
+    enrollment: e,
+    amount: getEffectiveRate(studentRates, rateCard, e),
+  }));
+  const amountOwed = breakdown.reduce((sum, b) => sum + b.amount, 0);
 
   if (!invoice) {
     invoice = {
       id: "",
-      enrollment_id: enrollmentId,
+      student_id: studentId,
       year_month: month,
-      sessions_attended: sessions.length,
-      amount_owed: rate,
+      sessions_attended: sessionsAttended,
+      amount_owed: amountOwed,
       status: "unpaid",
       paid_at: null,
       created_at: "",
@@ -116,16 +128,28 @@ export default async function PrintInvoicePage({
               {student.parent_contact}
             </p>
           )}
-          <p>
-            <span className="font-medium">Subject:</span>{" "}
-            {groupSizeLabel(enrollment.group_size)} {subjectLabel(enrollment.subject)} (
-            {enrollment.level === "preschool" ? "Preschool" : "Primary"})
-          </p>
-          <p>
-            <span className="font-medium">Schedule:</span>{" "}
-            {formatDayTime(enrollment)}
-            {enrollment.location ? ` · ${enrollment.location}` : ""}
-          </p>
+        </div>
+
+        <div className="space-y-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+          <p className="font-medium">Subjects:</p>
+          {breakdown.map(({ enrollment, amount }) => (
+            <div key={enrollment.id} className="flex items-center justify-between text-sm">
+              <span>
+                {groupSizeLabel(enrollment.group_size)} {subjectLabel(enrollment.subject)}{" "}
+                ({enrollment.level === "preschool" ? "Preschool" : "Primary"}) ·{" "}
+                {formatDayTime(enrollment)}
+                {enrollment.location ? ` · ${enrollment.location}` : ""}
+              </span>
+              <span className="whitespace-nowrap font-medium">
+                ${amount.toFixed(2)}
+              </span>
+            </div>
+          ))}
+          {breakdown.length === 0 && (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              No active subjects this month.
+            </p>
+          )}
         </div>
 
         <div className="space-y-1 border-t border-zinc-100 pt-4 dark:border-zinc-800">

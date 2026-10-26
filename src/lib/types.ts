@@ -75,7 +75,7 @@ export interface ClassSession {
 
 export interface Invoice {
   id: string;
-  enrollment_id: string;
+  student_id: string;
   year_month: string;
   sessions_attended: number;
   amount_owed: number;

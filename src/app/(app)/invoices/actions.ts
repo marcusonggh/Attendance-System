@@ -17,13 +17,13 @@ export async function finalizeInvoice(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const enrollmentId = String(formData.get("enrollment_id") ?? "");
+  const studentId = String(formData.get("student_id") ?? "");
   const yearMonth = String(formData.get("year_month") ?? "");
   const sessionsAttended = Number(formData.get("sessions_attended"));
   const amountOwed = Number(formData.get("amount_owed"));
 
   if (
-    !enrollmentId ||
+    !studentId ||
     !yearMonth ||
     Number.isNaN(sessionsAttended) ||
     Number.isNaN(amountOwed)
@@ -35,7 +35,7 @@ export async function finalizeInvoice(
   const { data: existing } = await supabase
     .from("invoices")
     .select("id")
-    .eq("enrollment_id", enrollmentId)
+    .eq("student_id", studentId)
     .eq("year_month", yearMonth)
     .maybeSingle();
 
@@ -48,7 +48,7 @@ export async function finalizeInvoice(
         })
         .eq("id", existing.id)
     : await supabase.from("invoices").insert({
-        enrollment_id: enrollmentId,
+        student_id: studentId,
         year_month: yearMonth,
         sessions_attended: sessionsAttended,
         amount_owed: amountOwed,
@@ -151,7 +151,7 @@ export async function finalizeAllInvoices(
     supabase.from("student_rates").select("*"),
     supabase
       .from("invoices")
-      .select("id, enrollment_id")
+      .select("id, student_id")
       .eq("year_month", yearMonth),
   ]);
 
@@ -159,15 +159,17 @@ export async function finalizeAllInvoices(
   const sessions = (sessionRows ?? []) as ClassSession[];
   const rateCard = (rateData ?? []) as RateCard[];
   const studentRates = (studentRateData ?? []) as StudentRate[];
-  const existingByEnrollment = new Map(
+  const existingByStudent = new Map(
     (existingInvoices ?? []).map((inv) => [
-      inv.enrollment_id as string,
+      inv.student_id as string,
       inv.id as string,
     ]),
   );
 
+  const studentIds = Array.from(new Set(enrollments.map((e) => e.student_id)));
+
   const toInsert: {
-    enrollment_id: string;
+    student_id: string;
     year_month: string;
     sessions_attended: number;
     amount_owed: number;
@@ -176,25 +178,32 @@ export async function finalizeAllInvoices(
   const toUpdate: { id: string; sessions_attended: number; amount_owed: number }[] =
     [];
 
-  for (const enrollment of enrollments) {
-    const sessionsAttended = sessions.filter(
-      (s) => s.enrollment_id === enrollment.id,
+  for (const studentId of studentIds) {
+    const studentEnrollments = enrollments.filter((e) => e.student_id === studentId);
+    const relevant = studentEnrollments.filter((e) =>
+      overlapsMonth(e, monthStart, monthEnd),
+    );
+    const existingId = existingByStudent.get(studentId);
+
+    // Skip a student entirely if none of their subjects overlap this month
+    // (unless already invoiced before dates changed), and skip if none of
+    // the overlapping subjects are active and nothing was attended either —
+    // nothing to bill in either case.
+    if (relevant.length === 0 && !existingId) continue;
+
+    const activeRelevant = relevant.filter((e) => e.active);
+    const sessionsAttended = sessions.filter((s) =>
+      relevant.some((e) => e.id === s.enrollment_id),
     ).length;
 
-    const existingId = existingByEnrollment.get(enrollment.id);
-
-    // Skip an enrollment that doesn't overlap this month at all (unless it
-    // was already invoiced before its dates changed), and skip a
-    // deactivated enrollment with neither attendance nor an existing
-    // invoice for this month — nothing to bill in either case.
-    if (!overlapsMonth(enrollment, monthStart, monthEnd) && !existingId) {
-      continue;
-    }
-    if (!enrollment.active && sessionsAttended === 0 && !existingId) {
+    if (activeRelevant.length === 0 && sessionsAttended === 0 && !existingId) {
       continue;
     }
 
-    const amountOwed = getEffectiveRate(studentRates, rateCard, enrollment);
+    const amountOwed = activeRelevant.reduce(
+      (sum, e) => sum + getEffectiveRate(studentRates, rateCard, e),
+      0,
+    );
 
     if (existingId) {
       toUpdate.push({
@@ -204,7 +213,7 @@ export async function finalizeAllInvoices(
       });
     } else {
       toInsert.push({
-        enrollment_id: enrollment.id,
+        student_id: studentId,
         year_month: yearMonth,
         sessions_attended: sessionsAttended,
         amount_owed: amountOwed,
@@ -236,7 +245,7 @@ export async function finalizeAllInvoices(
     message:
       total > 0
         ? `Finalized ${total} invoice${total === 1 ? "" : "s"}.`
-        : "No enrollments to finalize.",
+        : "No students to finalize.",
   };
 }
 

@@ -2,8 +2,7 @@ import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Enrollment, Student, Invoice } from "@/lib/types";
-import { subjectLabel } from "@/lib/rateCard";
+import type { Student, Invoice } from "@/lib/types";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -21,25 +20,16 @@ export default async function InvoiceHistoryPage({
 
   const supabase = await createClient();
 
-  const [{ data: invoiceRows }, { data: studentsData }, { data: enrollmentData }] =
-    await Promise.all([
-      supabase.from("invoices").select("*").order("year_month", { ascending: false }),
-      supabase.from("students").select("*"),
-      supabase.from("enrollments").select("*"),
-    ]);
+  const [{ data: invoiceRows }, { data: studentsData }] = await Promise.all([
+    supabase.from("invoices").select("*").order("year_month", { ascending: false }),
+    supabase.from("students").select("*"),
+  ]);
 
   const students = (studentsData ?? []) as Student[];
   const studentById = new Map(students.map((s) => [s.id, s]));
-  const enrollments = (enrollmentData ?? []) as Enrollment[];
-  const enrollmentById = new Map(enrollments.map((e) => [e.id, e]));
 
-  function labelFor(invoice: Invoice) {
-    const enrollment = enrollmentById.get(invoice.enrollment_id);
-    const student = enrollment ? studentById.get(enrollment.student_id) : undefined;
-    return {
-      name: student?.name ?? "Unknown student",
-      subject: enrollment ? subjectLabel(enrollment.subject) : "",
-    };
+  function nameFor(invoice: Invoice) {
+    return studentById.get(invoice.student_id)?.name ?? "Unknown student";
   }
 
   const invoices = ((invoiceRows ?? []) as Invoice[])
@@ -48,7 +38,7 @@ export default async function InvoiceHistoryPage({
       if (a.year_month !== b.year_month) {
         return a.year_month < b.year_month ? 1 : -1;
       }
-      return labelFor(a).name.localeCompare(labelFor(b).name);
+      return nameFor(a).localeCompare(nameFor(b));
     });
 
   const tabs: { key: StatusFilter; label: string }[] = [
@@ -95,10 +85,7 @@ export default async function InvoiceHistoryPage({
             className="flex flex-wrap items-center justify-between gap-4"
           >
             <div className="min-w-40 flex-1">
-              <p className="font-medium">
-                {labelFor(invoice).name}
-                {labelFor(invoice).subject ? ` · ${labelFor(invoice).subject}` : ""}
-              </p>
+              <p className="font-medium">{nameFor(invoice)}</p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {format(parseISO(`${invoice.year_month}-01`), "MMMM yyyy")} ·{" "}
                 {invoice.sessions_attended} session
@@ -120,7 +107,7 @@ export default async function InvoiceHistoryPage({
                 </span>
               )}
               <a
-                href={`/invoices/print?enrollment=${invoice.enrollment_id}&month=${invoice.year_month}`}
+                href={`/invoices/print?student=${invoice.student_id}&month=${invoice.year_month}`}
                 target="_blank"
                 className="text-xs text-teal-700 underline hover:text-teal-800"
               >

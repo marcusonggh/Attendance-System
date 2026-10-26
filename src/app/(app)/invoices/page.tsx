@@ -108,22 +108,31 @@ export default async function InvoicesPage({
   const rateCard = (rateData ?? []) as RateCard[];
   const studentRates = (studentRateData ?? []) as StudentRate[];
 
-  const rows = enrollments
-    .map((enrollment) => {
-      const student = studentById.get(enrollment.student_id);
-      const inRange = overlapsMonth(enrollment, monthStartStr, monthEndStr);
-      const liveSessionsAttended = sessions.filter(
-        (s) => s.enrollment_id === enrollment.id,
+  const studentIds = Array.from(new Set(enrollments.map((e) => e.student_id)));
+
+  const rows = studentIds
+    .map((studentId) => {
+      const student = studentById.get(studentId);
+      const studentEnrollments = enrollments.filter((e) => e.student_id === studentId);
+      const relevant = studentEnrollments.filter((e) =>
+        overlapsMonth(e, monthStartStr, monthEndStr),
+      );
+      const activeRelevant = relevant.filter((e) => e.active);
+      const breakdown = activeRelevant.map((e) => ({
+        enrollment: e,
+        amount: getEffectiveRate(studentRates, rateCard, e),
+      }));
+      const liveSessionsAttended = sessions.filter((s) =>
+        relevant.some((e) => e.id === s.enrollment_id),
       ).length;
-      const liveAmountOwed = inRange
-        ? getEffectiveRate(studentRates, rateCard, enrollment)
-        : 0;
-      const invoice = invoices.find((inv) => inv.enrollment_id === enrollment.id);
+      const liveAmountOwed = breakdown.reduce((sum, b) => sum + b.amount, 0);
+      const invoice = invoices.find((inv) => inv.student_id === studentId);
 
       return {
-        enrollment,
+        studentId,
         student,
-        inRange,
+        breakdown,
+        hasActiveSubjects: activeRelevant.length > 0,
         // What's shown and what a *new* finalize submits — always current.
         liveSessionsAttended,
         liveAmountOwed,
@@ -137,14 +146,11 @@ export default async function InvoicesPage({
       };
     })
     .filter((row): row is typeof row & { student: Student } => !!row.student)
-    // Only bill a month the enrollment actually overlaps — unless it was
-    // already invoiced before its dates changed, which stays visible for
-    // the audit trail.
-    .filter((row) => row.inRange || row.invoice)
-    // A deactivated enrollment only shows up for a month where it still has
-    // something to bill: existing attendance not yet invoiced, or an invoice
-    // already finalized. Once neither applies, it drops off naturally.
-    .filter((row) => row.enrollment.active || row.invoice || row.hasActivity);
+    // A student with no active subjects this month only shows up if there's
+    // still something to bill: existing attendance not yet invoiced, or an
+    // invoice already finalized. Once neither applies, they drop off.
+    .filter((row) => row.hasActiveSubjects || row.invoice || row.hasActivity)
+    .sort((a, b) => a.student.name.localeCompare(b.student.name));
 
   return (
     <div className="space-y-6">
@@ -208,8 +214,9 @@ export default async function InvoicesPage({
       <div className="space-y-2">
         {rows.map(
           ({
-            enrollment,
+            studentId,
             student,
+            breakdown,
             sessionsAttended,
             amountOwed,
             liveSessionsAttended,
@@ -225,13 +232,11 @@ export default async function InvoicesPage({
           );
 
           return (
-            <Card key={enrollment.id} className="flex flex-wrap items-center gap-4">
+            <Card key={studentId} className="flex flex-wrap items-start gap-4">
               <div className="min-w-40 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium">
-                    {student.name} · {subjectLabel(enrollment.subject)}
-                  </p>
-                  {!enrollment.active && <Badge tone="neutral">Inactive</Badge>}
+                  <p className="font-medium">{student.name}</p>
+                  {!student.active && <Badge tone="neutral">Inactive</Badge>}
                   {invoice && (
                     <Badge tone={invoice.status === "paid" ? "success" : "warning"}>
                       {invoice.status === "paid" ? "Paid" : "Unpaid"}
@@ -242,13 +247,25 @@ export default async function InvoicesPage({
                   {sessionsAttended} session{sessionsAttended === 1 ? "" : "s"} attended
                   {isStale && " (amount differs from current rate)"}
                 </p>
+                {breakdown.length > 0 && (
+                  <ul className="mt-1.5 space-y-0.5">
+                    {breakdown.map(({ enrollment, amount }) => (
+                      <li
+                        key={enrollment.id}
+                        className="text-xs text-zinc-500 dark:text-zinc-400"
+                      >
+                        {subjectLabel(enrollment.subject)} · ${amount.toFixed(2)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
-              <p className="text-lg font-semibold tabular-nums">
+              <p className="pt-1 text-lg font-semibold tabular-nums">
                 ${Number(amountOwed).toFixed(2)}
               </p>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
                 {contactLink && (
                   <a
                     href={contactLink.href}
@@ -278,7 +295,7 @@ export default async function InvoicesPage({
                       </Button>
                     </ActionForm>
                     <ActionForm action={finalizeInvoice}>
-                      <input type="hidden" name="enrollment_id" value={enrollment.id} />
+                      <input type="hidden" name="student_id" value={studentId} />
                       <input type="hidden" name="year_month" value={month} />
                       <input
                         type="hidden"
@@ -291,7 +308,7 @@ export default async function InvoicesPage({
                       </Button>
                     </ActionForm>
                     <a
-                      href={`/invoices/print?enrollment=${enrollment.id}&month=${month}`}
+                      href={`/invoices/print?student=${studentId}&month=${month}`}
                       target="_blank"
                       className={navLinkClass}
                     >
@@ -309,7 +326,7 @@ export default async function InvoicesPage({
                   </>
                 ) : (
                   <ActionForm action={finalizeInvoice}>
-                    <input type="hidden" name="enrollment_id" value={enrollment.id} />
+                    <input type="hidden" name="student_id" value={studentId} />
                     <input type="hidden" name="year_month" value={month} />
                     <input
                       type="hidden"
@@ -328,7 +345,7 @@ export default async function InvoicesPage({
         })}
         {rows.length === 0 && (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No active enrollments.
+            No active students.
           </p>
         )}
       </div>
