@@ -89,7 +89,13 @@ export default async function SchedulePage() {
   const groups = studentIds.map((id) => ({
     studentId: id,
     studentName: studentNameById.get(id) ?? "Unknown",
-    items: enrollments.filter((e) => e.student_id === id),
+    items: enrollments
+      .filter((e) => e.student_id === id)
+      .sort(
+        (a, b) =>
+          a.day_of_week - b.day_of_week ||
+          a.start_time.localeCompare(b.start_time),
+      ),
   }));
 
   return (
