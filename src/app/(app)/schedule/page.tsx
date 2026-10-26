@@ -193,9 +193,9 @@ export default async function SchedulePage() {
             <Card key={group.studentId} className="space-y-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-bold tracking-tight">{group.studentName}</h3>
-                {group.items.length > 1 && (
-                  <Badge tone="accent">{group.items.length} classes</Badge>
-                )}
+                <Badge tone="accent">
+                  {group.items.length} class{group.items.length === 1 ? "" : "es"}
+                </Badge>
               </div>
 
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
