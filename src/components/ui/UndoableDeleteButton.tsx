@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useToast } from "./ToastProvider";
 import { useOnlineStatus } from "./OnlineStatusProvider";
@@ -30,6 +31,7 @@ export function UndoableDeleteButton<TSnapshot, TArgs>({
   const [pending, setPending] = useState(false);
   const { push } = useToast();
   const isOnline = useOnlineStatus();
+  const router = useRouter();
 
   const handleClick = async () => {
     if (!isOnline) {
@@ -54,11 +56,13 @@ export function UndoableDeleteButton<TSnapshot, TArgs>({
               onClick: async () => {
                 const restoreResult = await onRestore(result.snapshot);
                 push(restoreResult);
+                router.refresh();
               },
             },
           }
         : undefined,
     );
+    if (result.success) router.refresh();
   };
 
   return (

@@ -55,8 +55,7 @@ export function formatTimeRange(
 ): string {
   const start = parse(startTime.slice(0, 5), "HH:mm", new Date());
   const end = addMinutes(start, durationHours * 60);
-  const fmt = (d: Date) =>
-    format(d, d.getMinutes() === 0 ? "ha" : "h:mma").toLowerCase();
+  const fmt = (d: Date) => format(d, "h:mma").toLowerCase();
   return `${fmt(start)}-${fmt(end)}`;
 }
 

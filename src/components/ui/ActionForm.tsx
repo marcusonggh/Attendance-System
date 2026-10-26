@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "./ToastProvider";
 import { useOnlineStatus } from "./OnlineStatusProvider";
 import type { ActionResult } from "@/lib/types";
@@ -28,6 +29,7 @@ export function ActionForm({
   );
   const { push } = useToast();
   const isOnline = useOnlineStatus();
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const lastHandled = useRef<ActionResult>(undefined);
 
@@ -35,10 +37,15 @@ export function ActionForm({
     if (state && state !== lastHandled.current) {
       lastHandled.current = state;
       push(state);
-      if (state.success && resetOnSuccess) formRef.current?.reset();
+      if (state.success) {
+        if (resetOnSuccess) formRef.current?.reset();
+        // revalidatePath() alone can leave the client's Router Cache
+        // showing a stale page until a hard reload — force it to refetch.
+        router.refresh();
+      }
       onResult?.(state);
     }
-  }, [state, push, resetOnSuccess, onResult]);
+  }, [state, push, resetOnSuccess, onResult, router]);
 
   return (
     <form

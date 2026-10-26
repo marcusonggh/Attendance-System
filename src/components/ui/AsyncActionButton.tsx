@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "./Button";
 import { useToast } from "./ToastProvider";
@@ -25,6 +26,7 @@ export function AsyncActionButton<TArgs>({
   const [pending, setPending] = useState(false);
   const { push } = useToast();
   const isOnline = useOnlineStatus();
+  const router = useRouter();
 
   const handleClick = async () => {
     if (!isOnline) {
@@ -40,6 +42,7 @@ export function AsyncActionButton<TArgs>({
     const result = await action(actionArgs);
     setPending(false);
     push(result);
+    if (result?.success) router.refresh();
   };
 
   return (
