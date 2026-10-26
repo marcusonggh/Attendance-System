@@ -22,10 +22,10 @@ export type Level = "preschool" | "primary";
 export type DurationHours = 0.5 | 0.75 | 1 | 1.5 | 2;
 
 export const DURATION_OPTIONS: { value: DurationHours; label: string }[] = [
-  { value: 0.5, label: "0.5 hours" },
-  { value: 0.75, label: "0.75 hours" },
+  { value: 0.5, label: "30 minutes" },
+  { value: 0.75, label: "45 minutes" },
   { value: 1, label: "1 hour" },
-  { value: 1.5, label: "1.5 hours" },
+  { value: 1.5, label: "1 hour 30 minutes" },
   { value: 2, label: "2 hours" },
 ];
 
