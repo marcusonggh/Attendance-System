@@ -21,7 +21,9 @@ export function getRate(
 }
 
 // A student's own rate for this tier (if set) overrides the level/group_size
-// default for every one of their enrollments in that tier.
+// default for every one of their enrollments in that tier. The tier rate is
+// defined per 1-hour class, so it scales with the enrollment's actual
+// duration — a 1.5 hour class costs 1.5x, a 45-minute class costs 0.75x.
 export function getEffectiveRate(
   studentRates: StudentRate[],
   rateCard: RateCard[],
@@ -33,8 +35,10 @@ export function getEffectiveRate(
       r.level === enrollment.level &&
       r.group_size === enrollment.group_size,
   );
-  if (override) return Number(override.rate);
-  return getRate(rateCard, enrollment.level, enrollment.group_size);
+  const baseRate = override
+    ? Number(override.rate)
+    : getRate(rateCard, enrollment.level, enrollment.group_size);
+  return baseRate * enrollment.duration_hours;
 }
 
 export function subjectLabel(subject: string): string {
