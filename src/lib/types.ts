@@ -96,7 +96,9 @@ export const WEEKDAY_LABELS = [
   "Saturday",
 ];
 
-export const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => {
+// Classes only run from 11am onward.
+export const HOUR_OPTIONS = Array.from({ length: 13 }, (_, i) => {
+  const hour = 11 + i;
   const value = String(hour).padStart(2, "0");
   return { value, label: value };
 });
