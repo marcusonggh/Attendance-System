@@ -128,14 +128,36 @@ export default async function AttendanceMonthPage({
             <Link
               key={dateStr}
               href={`/attendance/day?date=${dateStr}`}
-              className={`block min-h-32 rounded-md border p-1.5 text-[11px] leading-tight ${
+              className={`block min-h-16 rounded-md border p-1.5 text-[11px] leading-tight sm:min-h-32 ${
                 isToday
                   ? "border-teal-500 ring-1 ring-teal-500"
                   : "border-zinc-200 hover:border-teal-300"
               } ${inCurrentMonth ? "bg-white" : "bg-zinc-50 text-zinc-400"}`}
             >
               <p className="mb-1 text-xs font-medium">{format(day, "d")}</p>
-              <div className="space-y-1">
+
+              {/* Narrow screens: compact dots only — tap through to the Day
+                  view for detail instead of squeezing text into ~95px. */}
+              <div className="flex flex-wrap gap-1 sm:hidden">
+                {cardEnrollments.map((enrollment) => {
+                  const session = sessionByEnrollmentId.get(enrollment.id);
+                  const dotClass = !session
+                    ? "bg-zinc-300"
+                    : session.status === "present"
+                      ? "bg-green-500"
+                      : session.status === "absent"
+                        ? "bg-amber-500"
+                        : "bg-sky-500";
+                  return (
+                    <span
+                      key={enrollment.id}
+                      className={`h-2 w-2 flex-none rounded-full ${dotClass}`}
+                    />
+                  );
+                })}
+              </div>
+
+              <div className="hidden space-y-1 sm:block">
                 {cardEnrollments.map((enrollment) => {
                   const session = sessionByEnrollmentId.get(enrollment.id);
                   const name = studentNameById.get(enrollment.student_id) ?? "Unknown";
