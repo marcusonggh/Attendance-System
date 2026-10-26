@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import type { Level, RateCard, Student, StudentRate, Enrollment } from "@/lib/types";
-import { formatDayTime, getRate, groupSizeLabel, subjectLabel } from "@/lib/rateCard";
+import {
+  formatDayTime,
+  getEffectiveRate,
+  getRate,
+  groupSizeLabel,
+  subjectLabel,
+} from "@/lib/rateCard";
 import { updateStudent, toggleActive, saveStudentRate } from "./actions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -55,7 +61,12 @@ export function StudentList({
       </div>
 
       <div className="space-y-3">
-        {filtered.map((student) => (
+        {filtered.map((student) => {
+          const monthlyTotal = enrollments
+            .filter((e) => e.student_id === student.id && e.active)
+            .reduce((sum, e) => sum + getEffectiveRate(studentRates, rateCard, e), 0);
+
+          return (
           <Card key={student.id} className={student.active ? "" : "opacity-60"}>
             <div className="flex flex-wrap items-end justify-between gap-3">
               <ActionForm
@@ -88,6 +99,7 @@ export function StudentList({
                 <Badge tone={student.active ? "success" : "neutral"}>
                   {student.active ? "Active" : "Inactive"}
                 </Badge>
+                <Badge tone="accent">RM{monthlyTotal.toFixed(2)}/month</Badge>
                 <Button type="submit" variant="secondary" size="sm">
                   Save
                 </Button>
@@ -173,7 +185,8 @@ export function StudentList({
               </div>
             </div>
           </Card>
-        ))}
+          );
+        })}
         {filtered.length === 0 && students.length > 0 && (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             No students match &quot;{query}&quot;.
