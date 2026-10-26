@@ -18,7 +18,9 @@ function revalidateScheduleViews() {
 
 function parseDuration(formData: FormData): DurationHours | null {
   const raw = Number(formData.get("duration_hours"));
-  return raw === 1 || raw === 1.5 || raw === 2 ? raw : null;
+  return raw === 0.5 || raw === 0.75 || raw === 1 || raw === 1.5 || raw === 2
+    ? raw
+    : null;
 }
 
 function parseStartTime(formData: FormData): string | null {
