@@ -127,7 +127,7 @@ export default async function AttendanceCalendarPage({
             ...extraEnrollmentIds
               .map((id) => enrollmentById.get(id))
               .filter((e): e is Enrollment => !!e),
-          ];
+          ].sort((a, b) => a.start_time.localeCompare(b.start_time));
           const sessionByEnrollmentId = new Map(
             daySessions.map((s) => [s.enrollment_id, s]),
           );
