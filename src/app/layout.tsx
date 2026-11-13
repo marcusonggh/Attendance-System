@@ -31,13 +31,9 @@ export default function RootLayout({
       style={{ colorScheme: "light" }}
     >
       <body
-        className="relative flex min-h-full flex-col text-zinc-900"
+        className="relative flex min-h-full flex-col bg-zinc-50 text-zinc-900"
         suppressHydrationWarning
       >
-        <div className="fixed inset-0 -z-20 bg-gradient-to-br from-teal-100 via-cyan-50 to-emerald-100" />
-        <div className="fixed -top-32 -right-24 -z-10 h-96 w-96 rounded-full bg-teal-300/50 blur-3xl" />
-        <div className="fixed top-1/3 -left-32 -z-10 h-96 w-96 rounded-full bg-cyan-300/40 blur-3xl" />
-        <div className="fixed -bottom-32 right-1/4 -z-10 h-96 w-96 rounded-full bg-emerald-300/40 blur-3xl" />
         <OnlineStatusProvider>
           <ToastProvider>{children}</ToastProvider>
         </OnlineStatusProvider>
