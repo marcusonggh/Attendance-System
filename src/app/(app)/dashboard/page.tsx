@@ -1,14 +1,19 @@
-import { format, parseISO } from "date-fns";
-import { AlertTriangle } from "lucide-react";
+import { addMonths, endOfMonth, format, parseISO, startOfMonth } from "date-fns";
+import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Student, ClassSession, Enrollment, Invoice } from "@/lib/types";
 import DashboardCharts from "./DashboardCharts";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { inputClass } from "@/components/ui/Field";
 
 const LOW_ATTENDANCE_THRESHOLD = 70;
 const MIN_SESSIONS_TO_FLAG = 2;
+
+const navLinkClass =
+  "flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-600 hover:bg-zinc-100";
 
 function StatTile({
   label,
@@ -37,21 +42,43 @@ function StatTile({
   );
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month: monthParam } = await searchParams;
+  const month = monthParam ?? format(new Date(), "yyyy-MM");
+  const monthStart = startOfMonth(parseISO(`${month}-01`));
+  const monthEnd = endOfMonth(monthStart);
+  const monthLabel = format(monthStart, "MMMM yyyy");
+  const prevMonth = format(addMonths(monthStart, -1), "yyyy-MM");
+  const nextMonth = format(addMonths(monthStart, 1), "yyyy-MM");
+  const monthStartStr = format(monthStart, "yyyy-MM-dd");
+  const monthEndStr = format(monthEnd, "yyyy-MM-dd");
+
   const supabase = await createClient();
 
+  // The trend charts stay a fixed trailing window regardless of the
+  // selected month — a longer history is more useful there than one
+  // month's worth of daily dots.
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   const sinceStr = ninetyDaysAgo.toISOString().slice(0, 10);
-  const currentMonth = format(new Date(), "yyyy-MM");
 
   const [
-    { data: sessionRows },
+    { data: trendSessionRows },
+    { data: monthSessionRows },
     { data: studentsData },
     { data: invoiceRows },
     { data: enrollmentData },
   ] = await Promise.all([
     supabase.from("sessions").select("*").gte("date", sinceStr).order("date"),
+    supabase
+      .from("sessions")
+      .select("*")
+      .gte("date", monthStartStr)
+      .lte("date", monthEndStr),
     supabase.from("students").select("*").eq("active", true).order("name"),
     supabase.from("invoices").select("*").order("year_month"),
     supabase.from("enrollments").select("*"),
@@ -60,7 +87,10 @@ export default async function DashboardPage() {
   // Rescheduled slots didn't actually happen on their original date — they
   // moved to a new date (which gets its own present/absent row there), so
   // they're excluded from attendance-rate math entirely.
-  const sessions = ((sessionRows ?? []) as ClassSession[]).filter(
+  const trendSessions = ((trendSessionRows ?? []) as ClassSession[]).filter(
+    (s) => s.status !== "rescheduled",
+  );
+  const monthSessions = ((monthSessionRows ?? []) as ClassSession[]).filter(
     (s) => s.status !== "rescheduled",
   );
   const students = (studentsData ?? []) as Student[];
@@ -71,7 +101,7 @@ export default async function DashboardPage() {
   );
 
   const byDate = new Map<string, { present: number; total: number }>();
-  for (const session of sessions) {
+  for (const session of trendSessions) {
     const entry = byDate.get(session.date) ?? { present: 0, total: 0 };
     entry.present += session.status === "present" ? 1 : 0;
     entry.total += 1;
@@ -86,7 +116,7 @@ export default async function DashboardPage() {
 
   const perStudent = students
     .map((student) => {
-      const records = sessions.filter(
+      const records = monthSessions.filter(
         (s) => studentIdByEnrollmentId.get(s.enrollment_id) === student.id,
       );
       const present = records.filter((r) => r.status === "present").length;
@@ -113,45 +143,63 @@ export default async function DashboardPage() {
   }
   const revenue = Array.from(revenueByMonth.entries())
     .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([month, { paid, unpaid }]) => ({ month, paid, unpaid }));
+    .map(([m, { paid, unpaid }]) => ({ month: m, paid, unpaid }));
 
-  const thisMonthAttendance = sessions.filter((s) =>
-    s.date.startsWith(currentMonth),
-  );
-  const thisMonthPresent = thisMonthAttendance.filter(
-    (s) => s.status === "present",
-  ).length;
-  const attendanceRateThisMonth =
-    thisMonthAttendance.length > 0
-      ? Math.round((thisMonthPresent / thisMonthAttendance.length) * 100)
+  const monthPresent = monthSessions.filter((s) => s.status === "present").length;
+  const attendanceRate =
+    monthSessions.length > 0
+      ? Math.round((monthPresent / monthSessions.length) * 100)
       : 0;
 
   const needsAttention = perStudent
     .filter((s) => s.total >= MIN_SESSIONS_TO_FLAG && s.rate < LOW_ATTENDANCE_THRESHOLD)
     .sort((a, b) => a.rate - b.rate);
 
-  const thisMonthInvoices = invoices.filter((inv) => inv.year_month === currentMonth);
-  const collected = thisMonthInvoices
+  const monthInvoices = invoices.filter((inv) => inv.year_month === month);
+  const collected = monthInvoices
     .filter((i) => i.status === "paid")
     .reduce((sum, i) => sum + Number(i.amount_owed), 0);
-  const outstanding = thisMonthInvoices
+  const outstanding = monthInvoices
     .filter((i) => i.status === "unpaid")
     .reduce((sum, i) => sum + Number(i.amount_owed), 0);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Dashboard" />
+      <PageHeader
+        title={monthLabel}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <a href={`/dashboard?month=${prevMonth}`} className={navLinkClass}>
+              <ChevronLeft className="h-4 w-4" />
+            </a>
+            <form className="flex items-center gap-2">
+              <input
+                type="month"
+                name="month"
+                defaultValue={month}
+                className={inputClass}
+              />
+              <Button type="submit" variant="secondary" size="sm">
+                Go
+              </Button>
+            </form>
+            <a href={`/dashboard?month=${nextMonth}`} className={navLinkClass}>
+              <ChevronRight className="h-4 w-4" />
+            </a>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatTile label="Attendance this month" value={`${attendanceRateThisMonth}%`} />
+        <StatTile label="Attendance rate" value={`${attendanceRate}%`} />
         <StatTile label="Active students" value={students.length} />
         <StatTile
-          label="Collected this month"
+          label="Collected"
           value={`$${collected.toFixed(2)}`}
           tone="success"
         />
         <StatTile
-          label="Outstanding this month"
+          label="Outstanding"
           value={`$${outstanding.toFixed(2)}`}
           tone="warning"
         />
