@@ -1,6 +1,7 @@
 import { addMonths, endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { overlapsMonth } from "@/lib/rateCard";
 import type { Student, ClassSession, Enrollment, Invoice } from "@/lib/types";
 import DashboardCharts from "./DashboardCharts";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -79,7 +80,7 @@ export default async function DashboardPage({
       .select("*")
       .gte("date", monthStartStr)
       .lte("date", monthEndStr),
-    supabase.from("students").select("*").eq("active", true).order("name"),
+    supabase.from("students").select("*").order("name"),
     supabase.from("invoices").select("*").order("year_month"),
     supabase.from("enrollments").select("*"),
   ]);
@@ -93,12 +94,23 @@ export default async function DashboardPage({
   const monthSessions = ((monthSessionRows ?? []) as ClassSession[]).filter(
     (s) => s.status !== "rescheduled",
   );
-  const students = (studentsData ?? []) as Student[];
+  const allStudents = (studentsData ?? []) as Student[];
   const invoices = (invoiceRows ?? []) as Invoice[];
   const enrollments = (enrollmentData ?? []) as Enrollment[];
   const studentIdByEnrollmentId = new Map(
     enrollments.map((e) => [e.id, e.student_id]),
   );
+
+  // "Active" is month-specific here, not the student's current global flag
+  // — a student counts as active for a given month if they had an active
+  // enrollment overlapping it, same rule invoicing uses to decide who gets
+  // billed that month.
+  const activeStudentIdsThisMonth = new Set(
+    enrollments
+      .filter((e) => e.active && overlapsMonth(e, monthStartStr, monthEndStr))
+      .map((e) => e.student_id),
+  );
+  const students = allStudents.filter((s) => activeStudentIdsThisMonth.has(s.id));
 
   const byDate = new Map<string, { present: number; total: number }>();
   for (const session of trendSessions) {
