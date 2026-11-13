@@ -153,6 +153,12 @@ export default async function InvoicesPage({
     .filter((row) => row.hasActiveSubjects || row.invoice || row.hasActivity)
     .sort((a, b) => a.student.name.localeCompare(b.student.name));
 
+  const monthTotal = rows.reduce((sum, r) => sum + Number(r.amountOwed), 0);
+  const monthPaid = rows
+    .filter((r) => r.invoice?.status === "paid")
+    .reduce((sum, r) => sum + Number(r.amountOwed), 0);
+  const monthUnpaid = monthTotal - monthPaid;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -179,6 +185,35 @@ export default async function InvoicesPage({
           </div>
         }
       />
+
+      {rows.length > 0 && (
+        <div className="grid grid-cols-3 gap-3 sm:max-w-md">
+          <Card>
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              Total
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">
+              ${monthTotal.toFixed(2)}
+            </p>
+          </Card>
+          <Card>
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              Paid
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-green-600 dark:text-green-400">
+              ${monthPaid.toFixed(2)}
+            </p>
+          </Card>
+          <Card>
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              Unpaid
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-amber-600 dark:text-amber-400">
+              ${monthUnpaid.toFixed(2)}
+            </p>
+          </Card>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Link
