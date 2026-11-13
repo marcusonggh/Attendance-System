@@ -21,7 +21,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Field, inputClass } from "@/components/ui/Field";
+import { Field, inputClass, selectClass } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { UndoableDeleteButton } from "@/components/ui/UndoableDeleteButton";
@@ -42,7 +42,7 @@ function StartTimeFields({
           name="start_time_hour"
           defaultValue={defaultHour}
           required
-          className={`flex-1 ${inputClass}`}
+          className={`flex-1 ${selectClass}`}
         >
           {HOUR_OPTIONS.map((h) => (
             <option key={h.value} value={h.value}>
@@ -54,7 +54,7 @@ function StartTimeFields({
           name="start_time_minute"
           defaultValue={defaultMinute}
           required
-          className={`flex-1 ${inputClass}`}
+          className={`flex-1 ${selectClass}`}
         >
           {MINUTE_OPTIONS.map((m) => (
             <option key={m.value} value={m.value}>
@@ -110,7 +110,7 @@ export default async function SchedulePage() {
           <ActionForm action={addEnrollment} resetOnSuccess className="space-y-4">
             <div className={fieldGridClass}>
               <Field label="Student">
-                <select name="student_id" required className={inputClass}>
+                <select name="student_id" required className={selectClass}>
                   <option value="">Select student</option>
                   {students.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -120,7 +120,7 @@ export default async function SchedulePage() {
                 </select>
               </Field>
               <Field label="Subject">
-                <select name="subject" required className={inputClass}>
+                <select name="subject" required className={selectClass}>
                   {SUBJECTS.map((s) => (
                     <option key={s.value} value={s.value}>
                       {s.label}
@@ -129,19 +129,19 @@ export default async function SchedulePage() {
                 </select>
               </Field>
               <Field label="Level">
-                <select name="level" required className={inputClass}>
+                <select name="level" required className={selectClass}>
                   <option value="preschool">Preschool</option>
                   <option value="primary">Primary</option>
                 </select>
               </Field>
               <Field label="Group size">
-                <select name="group_size" className={inputClass}>
+                <select name="group_size" className={selectClass}>
                   <option value="1">1:1</option>
                   <option value="2">1:2</option>
                 </select>
               </Field>
               <Field label="Day">
-                <select name="day_of_week" required className={inputClass}>
+                <select name="day_of_week" required className={selectClass}>
                   {WEEKDAY_LABELS.map((label, day) => (
                     <option key={day} value={day}>
                       {label}
@@ -151,7 +151,7 @@ export default async function SchedulePage() {
               </Field>
               <StartTimeFields />
               <Field label="Duration">
-                <select name="duration_hours" required className={inputClass}>
+                <select name="duration_hours" required className={selectClass}>
                   {DURATION_OPTIONS.map((d) => (
                     <option key={d.value} value={d.value}>
                       {d.label}
@@ -218,7 +218,7 @@ export default async function SchedulePage() {
                             name="subject"
                             defaultValue={enrollment.subject}
                             required
-                            className={inputClass}
+                            className={selectClass}
                           >
                             {SUBJECTS.map((s) => (
                               <option key={s.value} value={s.value}>
@@ -232,7 +232,7 @@ export default async function SchedulePage() {
                             name="level"
                             defaultValue={enrollment.level}
                             required
-                            className={inputClass}
+                            className={selectClass}
                           >
                             <option value="preschool">Preschool</option>
                             <option value="primary">Primary</option>
@@ -242,7 +242,7 @@ export default async function SchedulePage() {
                           <select
                             name="group_size"
                             defaultValue={String(enrollment.group_size)}
-                            className={inputClass}
+                            className={selectClass}
                           >
                             <option value="1">1:1</option>
                             <option value="2">1:2</option>
@@ -253,7 +253,7 @@ export default async function SchedulePage() {
                             name="day_of_week"
                             defaultValue={enrollment.day_of_week}
                             required
-                            className={inputClass}
+                            className={selectClass}
                           >
                             {WEEKDAY_LABELS.map((label, day) => (
                               <option key={day} value={day}>
@@ -271,7 +271,7 @@ export default async function SchedulePage() {
                             name="duration_hours"
                             defaultValue={String(enrollment.duration_hours)}
                             required
-                            className={inputClass}
+                            className={selectClass}
                           >
                             {DURATION_OPTIONS.map((d) => (
                               <option key={d.value} value={d.value}>

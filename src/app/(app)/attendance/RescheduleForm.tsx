@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, X, CalendarClock } from "lucide-react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { Button } from "@/components/ui/Button";
-import { Field, inputClass } from "@/components/ui/Field";
+import { Field, inputClass, selectClass } from "@/components/ui/Field";
 import { DURATION_OPTIONS, HOUR_OPTIONS, MINUTE_OPTIONS, type DurationHours } from "@/lib/types";
 import { rescheduleSession } from "./actions";
 
@@ -74,7 +74,7 @@ export function RescheduleForm({
               required
               value={part.hour}
               onChange={(e) => updatePart(i, { hour: e.target.value })}
-              className={`${inputClass}`}
+              className={selectClass}
             >
               {HOUR_OPTIONS.map((h) => (
                 <option key={h.value} value={h.value}>
@@ -87,7 +87,7 @@ export function RescheduleForm({
               required
               value={part.minute}
               onChange={(e) => updatePart(i, { minute: e.target.value })}
-              className={`${inputClass}`}
+              className={selectClass}
             >
               {MINUTE_OPTIONS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -102,7 +102,7 @@ export function RescheduleForm({
               onChange={(e) =>
                 updatePart(i, { duration: Number(e.target.value) as DurationHours })
               }
-              className={`${inputClass}`}
+              className={selectClass}
             >
               {DURATION_OPTIONS.map((d) => (
                 <option key={d.value} value={d.value}>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { Button } from "@/components/ui/Button";
-import { inputClass } from "@/components/ui/Field";
+import { selectClass } from "@/components/ui/Field";
 import { subjectLabel } from "@/lib/rateCard";
 import type { Enrollment, Student } from "@/lib/types";
 import { addMakeupSession } from "./actions";
@@ -45,7 +45,7 @@ export function AddMakeupEnrollment({
       <select
         name="enrollment_id"
         required
-        className={`w-full text-xs ${inputClass}`}
+        className={`w-full text-xs ${selectClass}`}
       >
         <option value="">Select enrollment</option>
         {enrollments.map((e) => (
