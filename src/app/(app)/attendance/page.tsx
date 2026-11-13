@@ -148,42 +148,41 @@ export default async function AttendanceCalendarPage({
                 {cardEnrollments.length > 0 ? (
                   <Link
                     href={`/attendance/day?date=${dateStr}`}
-                    className="block rounded-md border border-teal-200 bg-teal-50 p-2 text-xs hover:border-teal-400"
+                    className="block space-y-1"
                   >
-                    <ul className="space-y-1">
-                      {visible.map((e) => {
-                        const session = sessionByEnrollmentId.get(e.id);
-                        const dotClass = !session
-                          ? "bg-zinc-300"
-                          : session.status === "present"
-                            ? "bg-green-500"
-                            : session.status === "absent"
-                              ? "bg-amber-500"
-                              : "bg-sky-500";
-                        return (
-                          <li key={e.id} className="text-teal-800">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className={`h-1.5 w-1.5 flex-none rounded-full ${dotClass}`}
-                              />
-                              <span className="truncate">
-                                {studentNameById.get(e.student_id) ?? "Unknown"} ·{" "}
-                                {groupSizeLabel(e.group_size)}{" "}
-                                {subjectLabel(e.subject)}
-                              </span>
-                            </div>
-                            <p className="pl-3 text-teal-600">
-                              {formatTimeRange(e.start_time, e.duration_hours)}
-                              {session?.status === "rescheduled" &&
-                                ` · moved to ${session.rescheduled_to_date}`}
-                            </p>
-                          </li>
-                        );
-                      })}
-                      {extra > 0 && (
-                        <li className="text-teal-600">+{extra} more</li>
-                      )}
-                    </ul>
+                    {visible.map((e) => {
+                      const session = sessionByEnrollmentId.get(e.id);
+                      const cellClass = !session
+                        ? "border border-dashed border-zinc-300 text-zinc-400"
+                        : session.status === "present"
+                          ? "bg-teal-50 text-teal-800"
+                          : session.status === "absent"
+                            ? "bg-amber-50 text-amber-800"
+                            : "bg-sky-50 text-sky-800";
+                      return (
+                        <div
+                          key={e.id}
+                          className={`rounded px-2 py-1 text-xs ${cellClass}`}
+                        >
+                          <p className="truncate font-medium">
+                            {studentNameById.get(e.student_id) ?? "Unknown"} ·{" "}
+                            {groupSizeLabel(e.group_size)}{" "}
+                            {subjectLabel(e.subject)}
+                          </p>
+                          <p className="truncate">
+                            {formatTimeRange(e.start_time, e.duration_hours)}
+                            {session
+                              ? session.status === "rescheduled"
+                                ? ` · moved to ${session.rescheduled_to_date}`
+                                : ` · ${session.status}`
+                              : " · not marked"}
+                          </p>
+                        </div>
+                      );
+                    })}
+                    {extra > 0 && (
+                      <p className="px-2 text-xs text-zinc-500">+{extra} more</p>
+                    )}
                   </Link>
                 ) : null}
 

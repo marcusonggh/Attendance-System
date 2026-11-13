@@ -244,3 +244,66 @@ export async function restoreSession(
   revalidateAttendanceViews();
   return { success: true, message: "Session restored." };
 }
+
+// A reschedule is two linked rows: the original date's "rescheduled" marker
+// and the new date's "present" session. Canceling needs to remove both, not
+// just the one the user clicked on.
+export async function cancelReschedule(
+  sessionId: string,
+): Promise<
+  | {
+      success: true;
+      message: string;
+      snapshot: { from: ClassSession; to: ClassSession | null };
+    }
+  | { success: false; message: string }
+> {
+  if (!sessionId) return { success: false, message: "Missing session." };
+
+  const supabase = await createClient();
+  const { data: fromSession } = await supabase
+    .from("sessions")
+    .select("*")
+    .eq("id", sessionId)
+    .single();
+
+  if (!fromSession || fromSession.status !== "rescheduled") {
+    return { success: false, message: "Session is not rescheduled." };
+  }
+
+  let toSession: ClassSession | null = null;
+  if (fromSession.rescheduled_to_date) {
+    const { data } = await supabase
+      .from("sessions")
+      .select("*")
+      .eq("enrollment_id", fromSession.enrollment_id)
+      .eq("date", fromSession.rescheduled_to_date)
+      .maybeSingle();
+    toSession = data;
+  }
+
+  const idsToDelete = [fromSession.id, ...(toSession ? [toSession.id] : [])];
+  const { error } = await supabase.from("sessions").delete().in("id", idsToDelete);
+
+  if (error) return { success: false, message: "Failed to cancel reschedule." };
+
+  revalidateAttendanceViews();
+  return {
+    success: true,
+    message: "Reschedule canceled.",
+    snapshot: { from: fromSession, to: toSession },
+  };
+}
+
+export async function restoreCanceledReschedule(
+  snapshot: { from: ClassSession; to: ClassSession | null },
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const rows = snapshot.to ? [snapshot.from, snapshot.to] : [snapshot.from];
+  const { error } = await supabase.from("sessions").insert(rows);
+
+  if (error) return { success: false, message: "Failed to restore reschedule." };
+
+  revalidateAttendanceViews();
+  return { success: true, message: "Reschedule restored." };
+}

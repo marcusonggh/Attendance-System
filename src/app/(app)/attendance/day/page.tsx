@@ -6,6 +6,7 @@ import {
   XCircle,
   CalendarPlus,
   CalendarClock,
+  CalendarX,
   Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -18,6 +19,8 @@ import {
   rescheduleSession,
   deleteSessionWithUndo,
   restoreSession,
+  cancelReschedule,
+  restoreCanceledReschedule,
 } from "../actions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -150,17 +153,28 @@ export default async function AttendanceDayPage({
                   )}
                 </div>
               </div>
-              {session && (
-                <UndoableDeleteButton
-                  deleteArgs={session.id}
-                  onDelete={deleteSessionWithUndo}
-                  onRestore={restoreSession}
-                  confirmMessage="Delete this session? This can't be undone."
-                  ariaLabel="Delete session"
-                  className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-                  icon={<Trash2 className="h-3.5 w-3.5" />}
-                />
-              )}
+              {session &&
+                (isRescheduled ? (
+                  <UndoableDeleteButton
+                    deleteArgs={session.id}
+                    onDelete={cancelReschedule}
+                    onRestore={restoreCanceledReschedule}
+                    confirmMessage="Cancel this reschedule? This removes both the original slot and the moved class."
+                    ariaLabel="Cancel reschedule"
+                    className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                    icon={<CalendarX className="h-3.5 w-3.5" />}
+                  />
+                ) : (
+                  <UndoableDeleteButton
+                    deleteArgs={session.id}
+                    onDelete={deleteSessionWithUndo}
+                    onRestore={restoreSession}
+                    confirmMessage="Delete this session? This can't be undone."
+                    ariaLabel="Delete session"
+                    className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                    icon={<Trash2 className="h-3.5 w-3.5" />}
+                  />
+                ))}
             </div>
 
             {!isRescheduled && (
