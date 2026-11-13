@@ -77,6 +77,39 @@ export function sessionTimeRange(
   );
 }
 
+// Two 1:2 enrollments are the "same class" if they share every detail of
+// the slot — there's no actual link between them in the data model, just
+// convention, so this is a best-effort match used purely for display
+// (combining them into one card instead of two identical-looking ones).
+function pairingKey(e: Enrollment): string {
+  return `${e.day_of_week}|${e.start_time}|${e.subject}|${e.level}|${e.location}`;
+}
+
+// Groups enrollments that look like the same shared 1:2 class together,
+// preserving the input order otherwise. Each result is 1 item (no match, or
+// group_size 1) or 2+ items (a matched group — normally 2, but matches
+// however many share the slot).
+export function groupPairedEnrollments<T extends Enrollment>(items: T[]): T[][] {
+  const output: T[][] = [];
+  const pending = new Map<string, T[]>();
+  for (const item of items) {
+    if (item.group_size !== 2) {
+      output.push([item]);
+      continue;
+    }
+    const key = pairingKey(item);
+    const existing = pending.get(key);
+    if (existing) {
+      existing.push(item);
+    } else {
+      const group = [item];
+      pending.set(key, group);
+      output.push(group);
+    }
+  }
+  return output;
+}
+
 // Whether this enrollment's weekly class actually falls on this date —
 // matching day_of_week isn't enough once the class has a start/end date.
 export function isScheduledOn(enrollment: Enrollment, dateStr: string): boolean {

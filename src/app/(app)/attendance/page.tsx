@@ -10,7 +10,13 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { ClassSession, Enrollment, RateCard, Student } from "@/lib/types";
-import { groupSizeLabel, isScheduledOn, sessionTimeRange, subjectLabel } from "@/lib/rateCard";
+import {
+  groupPairedEnrollments,
+  groupSizeLabel,
+  isScheduledOn,
+  sessionTimeRange,
+  subjectLabel,
+} from "@/lib/rateCard";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -131,8 +137,11 @@ export default async function AttendanceCalendarPage({
           const sessionByEnrollmentId = new Map(
             daySessions.map((s) => [s.enrollment_id, s]),
           );
-          const visible = cardEnrollments.slice(0, MAX_VISIBLE_ENROLLMENTS);
-          const extra = cardEnrollments.length - visible.length;
+          // Two students sharing the same 1:2 class look identical except
+          // for the name — show them as one entry instead of two.
+          const cardGroups = groupPairedEnrollments(cardEnrollments);
+          const visible = cardGroups.slice(0, MAX_VISIBLE_ENROLLMENTS);
+          const extra = cardGroups.length - visible.length;
 
           return (
             <Card
@@ -150,8 +159,12 @@ export default async function AttendanceCalendarPage({
                     href={`/attendance/day?date=${dateStr}`}
                     className="block space-y-1"
                   >
-                    {visible.map((e) => {
-                      const session = sessionByEnrollmentId.get(e.id);
+                    {visible.map((group) => {
+                      const session = sessionByEnrollmentId.get(group[0].id);
+                      const statuses = group.map(
+                        (e) => sessionByEnrollmentId.get(e.id)?.status ?? null,
+                      );
+                      const mixed = !statuses.every((s) => s === statuses[0]);
                       const cellClass = !session
                         ? "border border-dashed border-zinc-300 text-zinc-400"
                         : session.status === "present"
@@ -161,21 +174,27 @@ export default async function AttendanceCalendarPage({
                             : "bg-sky-50 text-sky-800";
                       return (
                         <div
-                          key={e.id}
+                          key={group[0].id}
                           className={`rounded px-2 py-1 text-xs ${cellClass}`}
                         >
-                          <p className="truncate font-medium">
-                            {studentNameById.get(e.student_id) ?? "Unknown"} ·{" "}
-                            {groupSizeLabel(e.group_size)}{" "}
-                            {subjectLabel(e.subject)}
+                          {group.map((e) => (
+                            <p key={e.id} className="truncate font-medium">
+                              {studentNameById.get(e.student_id) ?? "Unknown"}
+                            </p>
+                          ))}
+                          <p className="truncate">
+                            {groupSizeLabel(group[0].group_size)}{" "}
+                            {subjectLabel(group[0].subject)}
                           </p>
                           <p className="truncate">
-                            {sessionTimeRange(session, e)}
-                            {session
-                              ? session.status === "rescheduled"
-                                ? ` · moved to ${session.rescheduled_to_date}`
-                                : ` · ${session.status}`
-                              : " · not marked"}
+                            {sessionTimeRange(session, group[0])}
+                            {mixed
+                              ? " · mixed"
+                              : session
+                                ? session.status === "rescheduled"
+                                  ? ` · moved to ${session.rescheduled_to_date}`
+                                  : ` · ${session.status}`
+                                : " · not marked"}
                           </p>
                         </div>
                       );

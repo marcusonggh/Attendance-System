@@ -12,7 +12,13 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { ClassSession, Enrollment, Student } from "@/lib/types";
-import { groupSizeLabel, isScheduledOn, sessionTimeRange, subjectLabel } from "@/lib/rateCard";
+import {
+  groupPairedEnrollments,
+  groupSizeLabel,
+  isScheduledOn,
+  sessionTimeRange,
+  subjectLabel,
+} from "@/lib/rateCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/Field";
@@ -125,6 +131,9 @@ export default async function AttendanceMonthPage({
           const sessionByEnrollmentId = new Map(
             daySessions.map((s) => [s.enrollment_id, s]),
           );
+          // Two students sharing the same 1:2 class look identical except
+          // for the name — show them as one entry instead of two.
+          const cardGroups = groupPairedEnrollments(cardEnrollments);
 
           return (
             <Link
@@ -139,9 +148,12 @@ export default async function AttendanceMonthPage({
               <p className="mb-1 text-xs font-medium">{format(day, "d")}</p>
 
               <div className="space-y-1">
-                {cardEnrollments.map((enrollment) => {
-                  const session = sessionByEnrollmentId.get(enrollment.id);
-                  const name = studentNameById.get(enrollment.student_id) ?? "Unknown";
+                {cardGroups.map((group) => {
+                  const session = sessionByEnrollmentId.get(group[0].id);
+                  const statuses = group.map(
+                    (e) => sessionByEnrollmentId.get(e.id)?.status ?? null,
+                  );
+                  const mixed = !statuses.every((s) => s === statuses[0]);
 
                   const cellClass = !session
                     ? "border border-dashed border-zinc-300 text-zinc-400"
@@ -153,20 +165,27 @@ export default async function AttendanceMonthPage({
 
                   return (
                     <div
-                      key={enrollment.id}
+                      key={group[0].id}
                       className={`rounded px-1 py-0.5 ${cellClass}`}
                     >
-                      <p className="truncate font-medium">
-                        {name} · {groupSizeLabel(enrollment.group_size)}{" "}
-                        {subjectLabel(enrollment.subject)}
+                      {group.map((e) => (
+                        <p key={e.id} className="truncate font-medium">
+                          {studentNameById.get(e.student_id) ?? "Unknown"}
+                        </p>
+                      ))}
+                      <p className="truncate">
+                        {groupSizeLabel(group[0].group_size)}{" "}
+                        {subjectLabel(group[0].subject)}
                       </p>
                       <p className="truncate">
-                        {sessionTimeRange(session, enrollment)}
-                        {session
-                          ? session.status === "rescheduled"
-                            ? ` · moved to ${session.rescheduled_to_date}`
-                            : ` · ${session.status}`
-                          : " · not marked"}
+                        {sessionTimeRange(session, group[0])}
+                        {mixed
+                          ? " · mixed"
+                          : session
+                            ? session.status === "rescheduled"
+                              ? ` · moved to ${session.rescheduled_to_date}`
+                              : ` · ${session.status}`
+                            : " · not marked"}
                       </p>
                     </div>
                   );

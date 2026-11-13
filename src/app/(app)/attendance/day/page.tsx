@@ -10,7 +10,13 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { ClassSession, Enrollment, Student } from "@/lib/types";
-import { groupSizeLabel, isScheduledOn, sessionTimeRange, subjectLabel } from "@/lib/rateCard";
+import {
+  groupPairedEnrollments,
+  groupSizeLabel,
+  isScheduledOn,
+  sessionTimeRange,
+  subjectLabel,
+} from "@/lib/rateCard";
 import {
   markAttendance,
   markAllPresent,
@@ -103,6 +109,9 @@ export default async function AttendanceDayPage({
   const cards = [...scheduledToday, ...extraFromSessions].sort((a, b) =>
     a.start_time.localeCompare(b.start_time),
   );
+  // Two students sharing the same 1:2 class look identical except for the
+  // name — group them into one card instead of two side by side.
+  const cardGroups = groupPairedEnrollments(cards);
 
   return (
     <div className="space-y-6">
@@ -152,113 +161,124 @@ export default async function AttendanceDayPage({
         </p>
       )}
 
-      {cards.map((enrollment) => {
-        const session = sessionByEnrollmentId.get(enrollment.id);
-        const studentName = studentNameById.get(enrollment.student_id) ?? "Unknown";
-        const isRescheduled = session?.status === "rescheduled";
+      {cardGroups.map((group) => (
+        <Card key={group[0].id} className="space-y-3">
+          {group.map((enrollment, i) => {
+            const session = sessionByEnrollmentId.get(enrollment.id);
+            const studentName = studentNameById.get(enrollment.student_id) ?? "Unknown";
+            const isRescheduled = session?.status === "rescheduled";
 
-        return (
-          <Card key={enrollment.id} className="space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h2 className="text-base font-semibold">{studentName}</h2>
-                <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                  {groupSizeLabel(enrollment.group_size)}{" "}
-                  {subjectLabel(enrollment.subject)}
-                </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {sessionTimeRange(session, enrollment)}
-                </p>
-                {enrollment.location && (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {enrollment.location}
-                  </p>
-                )}
-                <div className="mt-1 flex gap-1.5">
-                  {session?.is_makeup && <Badge tone="accent">Make-up</Badge>}
-                  {isRescheduled && session && (
-                    <Badge tone="accent">
-                      Rescheduled → {rescheduledTargetLabel(session)}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              {session &&
-                (isRescheduled ? (
-                  <UndoableDeleteButton
-                    deleteArgs={session.id}
-                    onDelete={cancelReschedule}
-                    onRestore={restoreCanceledReschedule}
-                    confirmMessage="Cancel this reschedule? This removes both the original slot and the moved class."
-                    ariaLabel="Cancel reschedule"
-                    className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-                    icon={<CalendarX className="h-3.5 w-3.5" />}
-                  />
-                ) : (
-                  <UndoableDeleteButton
-                    deleteArgs={session.id}
-                    onDelete={deleteSessionWithUndo}
-                    onRestore={restoreSession}
-                    confirmMessage="Delete this session? This can't be undone."
-                    ariaLabel="Delete session"
-                    className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-                    icon={<Trash2 className="h-3.5 w-3.5" />}
-                  />
-                ))}
-            </div>
-
-            {session && (
-              <SessionNotes sessionId={session.id} initialNotes={session.notes} />
-            )}
-
-            {!isRescheduled && (
-              <>
-                <ActionForm
-                  action={markAttendance}
-                  className="flex flex-col gap-2 sm:flex-row sm:items-center"
-                >
-                  <input type="hidden" name="date" value={date} />
-                  <input type="hidden" name="enrollment_id" value={enrollment.id} />
-                  <div className="flex items-center gap-2">
-                    <StatusSubmitButton
-                      value="present"
-                      active={session?.status === "present"}
-                      activeClassName="bg-green-600 text-white"
-                      inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100"
-                      icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-                    >
-                      Present
-                    </StatusSubmitButton>
-                    <StatusSubmitButton
-                      value="absent"
-                      active={session?.status === "absent"}
-                      activeClassName="bg-amber-600 text-white"
-                      inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100"
-                      icon={<XCircle className="h-3.5 w-3.5" />}
-                    >
-                      Absent
-                    </StatusSubmitButton>
+            return (
+              <div
+                key={enrollment.id}
+                className={
+                  i === 0
+                    ? "space-y-3"
+                    : "space-y-3 border-t border-zinc-100 pt-3 dark:border-zinc-800"
+                }
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h2 className="text-base font-semibold">{studentName}</h2>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                      {groupSizeLabel(enrollment.group_size)}{" "}
+                      {subjectLabel(enrollment.subject)}
+                    </p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {sessionTimeRange(session, enrollment)}
+                    </p>
+                    {enrollment.location && (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {enrollment.location}
+                      </p>
+                    )}
+                    <div className="mt-1 flex gap-1.5">
+                      {session?.is_makeup && <Badge tone="accent">Make-up</Badge>}
+                      {isRescheduled && session && (
+                        <Badge tone="accent">
+                          Rescheduled → {rescheduledTargetLabel(session)}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <input
-                    name="reason"
-                    placeholder="Absence reason (optional)"
-                    defaultValue={session?.absence_reason ?? ""}
-                    className={`flex-1 text-xs ${inputClass}`}
-                  />
-                </ActionForm>
+                  {session &&
+                    (isRescheduled ? (
+                      <UndoableDeleteButton
+                        deleteArgs={session.id}
+                        onDelete={cancelReschedule}
+                        onRestore={restoreCanceledReschedule}
+                        confirmMessage="Cancel this reschedule? This removes both the original slot and the moved class."
+                        ariaLabel="Cancel reschedule"
+                        className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                        icon={<CalendarX className="h-3.5 w-3.5" />}
+                      />
+                    ) : (
+                      <UndoableDeleteButton
+                        deleteArgs={session.id}
+                        onDelete={deleteSessionWithUndo}
+                        onRestore={restoreSession}
+                        confirmMessage="Delete this session? This can't be undone."
+                        ariaLabel="Delete session"
+                        className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                        icon={<Trash2 className="h-3.5 w-3.5" />}
+                      />
+                    ))}
+                </div>
 
-                <RescheduleForm
-                  enrollmentId={enrollment.id}
-                  fromDate={date}
-                  defaultHour={(session?.start_time ?? enrollment.start_time).slice(0, 2)}
-                  defaultMinute={(session?.start_time ?? enrollment.start_time).slice(3, 5)}
-                  originalDuration={session?.duration_hours ?? enrollment.duration_hours}
-                />
-              </>
-            )}
-          </Card>
-        );
-      })}
+                {session && (
+                  <SessionNotes sessionId={session.id} initialNotes={session.notes} />
+                )}
+
+                {!isRescheduled && (
+                  <>
+                    <ActionForm
+                      action={markAttendance}
+                      className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                    >
+                      <input type="hidden" name="date" value={date} />
+                      <input type="hidden" name="enrollment_id" value={enrollment.id} />
+                      <div className="flex items-center gap-2">
+                        <StatusSubmitButton
+                          value="present"
+                          active={session?.status === "present"}
+                          activeClassName="bg-green-600 text-white"
+                          inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100"
+                          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                        >
+                          Present
+                        </StatusSubmitButton>
+                        <StatusSubmitButton
+                          value="absent"
+                          active={session?.status === "absent"}
+                          activeClassName="bg-amber-600 text-white"
+                          inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100"
+                          icon={<XCircle className="h-3.5 w-3.5" />}
+                        >
+                          Absent
+                        </StatusSubmitButton>
+                      </div>
+                      <input
+                        name="reason"
+                        placeholder="Absence reason (optional)"
+                        defaultValue={session?.absence_reason ?? ""}
+                        className={`flex-1 text-xs ${inputClass}`}
+                      />
+                    </ActionForm>
+
+                    <RescheduleForm
+                      enrollmentId={enrollment.id}
+                      fromDate={date}
+                      defaultHour={(session?.start_time ?? enrollment.start_time).slice(0, 2)}
+                      defaultMinute={(session?.start_time ?? enrollment.start_time).slice(3, 5)}
+                      originalDuration={session?.duration_hours ?? enrollment.duration_hours}
+                    />
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </Card>
+      ))}
 
       <Card className="space-y-3">
         <h2 className="flex items-center gap-2 font-medium">
