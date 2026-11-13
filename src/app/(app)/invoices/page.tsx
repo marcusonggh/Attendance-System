@@ -232,8 +232,8 @@ export default async function InvoicesPage({
           );
 
           return (
-            <Card key={studentId} className="flex flex-wrap items-start gap-4">
-              <div className="min-w-40 flex-1">
+            <Card key={studentId}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <p className="font-medium">{student.name}</p>
                   {!student.active && <Badge tone="neutral">Inactive</Badge>}
@@ -243,29 +243,30 @@ export default async function InvoicesPage({
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {sessionsAttended} session{sessionsAttended === 1 ? "" : "s"} attended
-                  {isStale && " (amount differs from current rate)"}
+                <p className="text-lg font-semibold tabular-nums">
+                  ${Number(amountOwed).toFixed(2)}
                 </p>
-                {breakdown.length > 0 && (
-                  <ul className="mt-1.5 space-y-0.5">
-                    {breakdown.map(({ enrollment, amount }) => (
-                      <li
-                        key={enrollment.id}
-                        className="text-xs text-zinc-500 dark:text-zinc-400"
-                      >
-                        {subjectLabel(enrollment.subject)} · ${amount.toFixed(2)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </div>
 
-              <p className="pt-1 text-lg font-semibold tabular-nums">
-                ${Number(amountOwed).toFixed(2)}
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                {sessionsAttended} session{sessionsAttended === 1 ? "" : "s"} attended
+                {isStale && " (amount differs from current rate)"}
               </p>
 
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              {breakdown.length > 1 && (
+                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
+                  {breakdown.map(({ enrollment, amount }) => (
+                    <p
+                      key={enrollment.id}
+                      className="text-xs text-zinc-500 dark:text-zinc-400"
+                    >
+                      {subjectLabel(enrollment.subject)} · ${amount.toFixed(2)}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
                 {contactLink && (
                   <a
                     href={contactLink.href}
