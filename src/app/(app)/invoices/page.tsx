@@ -18,6 +18,7 @@ import type {
   Student,
   StudentRate,
 } from "@/lib/types";
+import { WEEKDAY_LABELS } from "@/lib/types";
 import { getEffectiveRate, overlapsMonth, subjectLabel } from "@/lib/rateCard";
 import {
   finalizeInvoice,
@@ -253,14 +254,16 @@ export default async function InvoicesPage({
                 {isStale && " (amount differs from current rate)"}
               </p>
 
-              {breakdown.length > 1 && (
+              {breakdown.length > 0 && (
                 <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
                   {breakdown.map(({ enrollment, amount }) => (
                     <p
                       key={enrollment.id}
                       className="text-xs text-zinc-500 dark:text-zinc-400"
                     >
-                      {subjectLabel(enrollment.subject)} · ${amount.toFixed(2)}
+                      {subjectLabel(enrollment.subject)} (
+                      {WEEKDAY_LABELS[enrollment.day_of_week].slice(0, 3)}) · $
+                      {amount.toFixed(2)}
                     </p>
                   ))}
                 </div>
