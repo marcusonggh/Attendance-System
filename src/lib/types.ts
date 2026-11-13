@@ -70,6 +70,14 @@ export interface ClassSession {
   absence_reason: string | null;
   is_makeup: boolean;
   rescheduled_to_date: string | null;
+  // Links every session belonging to one reschedule (the original
+  // "rescheduled" row plus each make-up part it created) so they can all be
+  // found and canceled together, however many parts there are.
+  reschedule_group_id: string | null;
+  // Overrides the enrollment's normal weekly start_time/duration_hours for
+  // display only — null means "use the enrollment's own slot".
+  start_time: string | null;
+  duration_hours: DurationHours | null;
   created_at: string;
 }
 

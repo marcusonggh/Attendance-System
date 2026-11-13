@@ -12,7 +12,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { ClassSession, Enrollment, Student } from "@/lib/types";
-import { formatTimeRange, groupSizeLabel, isScheduledOn, subjectLabel } from "@/lib/rateCard";
+import { groupSizeLabel, isScheduledOn, sessionTimeRange, subjectLabel } from "@/lib/rateCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/Field";
@@ -161,7 +161,7 @@ export default async function AttendanceMonthPage({
                         {subjectLabel(enrollment.subject)}
                       </p>
                       <p className="truncate">
-                        {formatTimeRange(enrollment.start_time, enrollment.duration_hours)}
+                        {sessionTimeRange(session, enrollment)}
                         {session
                           ? session.status === "rescheduled"
                             ? ` · moved to ${session.rescheduled_to_date}`

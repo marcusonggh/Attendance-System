@@ -2,6 +2,7 @@ import { addMinutes, format, parse } from "date-fns";
 import {
   SUBJECTS,
   WEEKDAY_LABELS,
+  type ClassSession,
   type DurationHours,
   type Enrollment,
   type Level,
@@ -61,6 +62,19 @@ export function formatTimeRange(
 
 export function formatDayTime(enrollment: Enrollment): string {
   return `${WEEKDAY_LABELS[enrollment.day_of_week]} ${formatTimeRange(enrollment.start_time, enrollment.duration_hours)}`;
+}
+
+// A session can override the enrollment's normal weekly start_time/duration
+// (e.g. one part of a split reschedule) — fall back to the enrollment's own
+// slot when it doesn't.
+export function sessionTimeRange(
+  session: Pick<ClassSession, "start_time" | "duration_hours"> | undefined,
+  enrollment: Enrollment,
+): string {
+  return formatTimeRange(
+    session?.start_time ?? enrollment.start_time,
+    session?.duration_hours ?? enrollment.duration_hours,
+  );
 }
 
 // Whether this enrollment's weekly class actually falls on this date —

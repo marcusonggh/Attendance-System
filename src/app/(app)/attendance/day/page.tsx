@@ -5,18 +5,16 @@ import {
   CheckCircle2,
   XCircle,
   CalendarPlus,
-  CalendarClock,
   CalendarX,
   Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { ClassSession, Enrollment, Student } from "@/lib/types";
-import { formatDayTime, groupSizeLabel, isScheduledOn, subjectLabel } from "@/lib/rateCard";
+import { groupSizeLabel, isScheduledOn, sessionTimeRange, subjectLabel } from "@/lib/rateCard";
 import {
   markAttendance,
   markAllPresent,
   addMakeupSession,
-  rescheduleSession,
   deleteSessionWithUndo,
   restoreSession,
   cancelReschedule,
@@ -31,6 +29,7 @@ import { ActionForm } from "@/components/ui/ActionForm";
 import { StatusSubmitButton } from "@/components/ui/StatusSubmitButton";
 import { UndoableDeleteButton } from "@/components/ui/UndoableDeleteButton";
 import { ViewSwitcher } from "../ViewSwitcher";
+import { RescheduleForm } from "../RescheduleForm";
 
 const navLinkClass =
   "flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-600 hover:bg-zinc-100";
@@ -62,6 +61,35 @@ export default async function AttendanceDayPage({
   const sessions = (sessionRows ?? []) as ClassSession[];
   const sessionByEnrollmentId = new Map(sessions.map((s) => [s.enrollment_id, s]));
   const activeEnrollments = allEnrollments.filter((e) => e.active);
+
+  // A reschedule can be split across several target dates — look up every
+  // date each rescheduled session's group was split into, so the badge can
+  // list all of them instead of just the single rescheduled_to_date.
+  const rescheduledGroupIds = sessions
+    .filter((s) => s.status === "rescheduled" && s.reschedule_group_id)
+    .map((s) => s.reschedule_group_id as string);
+  const { data: groupPartRows } =
+    rescheduledGroupIds.length > 0
+      ? await supabase
+          .from("sessions")
+          .select("date, reschedule_group_id")
+          .eq("status", "present")
+          .in("reschedule_group_id", rescheduledGroupIds)
+      : { data: [] as { date: string; reschedule_group_id: string }[] };
+  const targetDatesByGroup = new Map<string, string[]>();
+  for (const row of groupPartRows ?? []) {
+    const list = targetDatesByGroup.get(row.reschedule_group_id) ?? [];
+    list.push(row.date);
+    targetDatesByGroup.set(row.reschedule_group_id, [...list].sort());
+  }
+  function rescheduledTargetLabel(session: ClassSession) {
+    const dates = session.reschedule_group_id
+      ? targetDatesByGroup.get(session.reschedule_group_id)
+      : undefined;
+    return dates && dates.length > 0
+      ? dates.join(", ")
+      : session.rescheduled_to_date;
+  }
 
   const scheduledToday = activeEnrollments.filter(
     (e) => e.day_of_week === dayOfWeek && isScheduledOn(e, date),
@@ -137,7 +165,7 @@ export default async function AttendanceDayPage({
                   {subjectLabel(enrollment.subject)}
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {formatDayTime(enrollment)}
+                  {sessionTimeRange(session, enrollment)}
                 </p>
                 {enrollment.location && (
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -146,9 +174,9 @@ export default async function AttendanceDayPage({
                 )}
                 <div className="mt-1 flex gap-1.5">
                   {session?.is_makeup && <Badge tone="accent">Make-up</Badge>}
-                  {isRescheduled && (
+                  {isRescheduled && session && (
                     <Badge tone="accent">
-                      Rescheduled → {session?.rescheduled_to_date}
+                      Rescheduled → {rescheduledTargetLabel(session)}
                     </Badge>
                   )}
                 </div>
@@ -213,20 +241,13 @@ export default async function AttendanceDayPage({
                   />
                 </ActionForm>
 
-                <ActionForm
-                  action={rescheduleSession}
-                  className="flex flex-wrap items-end gap-2 border-t border-zinc-100 pt-2 dark:border-zinc-800"
-                >
-                  <input type="hidden" name="enrollment_id" value={enrollment.id} />
-                  <input type="hidden" name="from_date" value={date} />
-                  <Field label="Reschedule to" className="flex-1">
-                    <input type="date" name="to_date" required className={inputClass} />
-                  </Field>
-                  <Button type="submit" variant="secondary" size="sm">
-                    <CalendarClock className="h-3.5 w-3.5" />
-                    Reschedule
-                  </Button>
-                </ActionForm>
+                <RescheduleForm
+                  enrollmentId={enrollment.id}
+                  fromDate={date}
+                  defaultHour={(session?.start_time ?? enrollment.start_time).slice(0, 2)}
+                  defaultMinute={(session?.start_time ?? enrollment.start_time).slice(3, 5)}
+                  originalDuration={session?.duration_hours ?? enrollment.duration_hours}
+                />
               </>
             )}
           </Card>

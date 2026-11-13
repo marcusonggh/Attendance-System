@@ -1,14 +1,20 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import type { ActionResult, ClassSession } from "@/lib/types";
+import type { ActionResult, ClassSession, DurationHours } from "@/lib/types";
 
 function revalidateAttendanceViews() {
   revalidatePath("/attendance");
   revalidatePath("/attendance/day");
   revalidatePath("/attendance/month");
+}
+
+function parseDurationPart(raw: string): DurationHours | null {
+  const n = Number(raw);
+  return n === 0.5 || n === 0.75 || n === 1 || n === 1.5 || n === 2 ? n : null;
 }
 
 export async function markAttendance(
@@ -148,19 +154,45 @@ export async function addMakeupSession(
   return { success: true, message: "Session added." };
 }
 
+// A missed class can be rescheduled into several parts across different
+// dates (e.g. a missed 1.5hr class rebooked as three 0.5hr catch-up
+// sessions) — to_date/to_hour/to_minute/to_duration are parallel arrays,
+// one entry per part, submitted as repeated form fields.
 export async function rescheduleSession(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
   const enrollmentId = String(formData.get("enrollment_id") ?? "");
   const fromDate = String(formData.get("from_date") ?? "");
-  const toDate = String(formData.get("to_date") ?? "");
+  const toDates = formData.getAll("to_date").map(String);
+  const toHours = formData.getAll("to_hour").map(String);
+  const toMinutes = formData.getAll("to_minute").map(String);
+  const toDurations = formData.getAll("to_duration").map(String);
 
-  if (!enrollmentId || !fromDate || !toDate) {
-    return { success: false, message: "Pick a new date." };
+  if (!enrollmentId || !fromDate || toDates.length === 0) {
+    return { success: false, message: "Pick at least one date to reschedule to." };
   }
-  if (fromDate === toDate) {
-    return { success: false, message: "Pick a different date to reschedule to." };
+
+  const parts: { date: string; startTime: string; duration: DurationHours }[] = [];
+  for (let i = 0; i < toDates.length; i++) {
+    const date = toDates[i];
+    const duration = parseDurationPart(toDurations[i] ?? "");
+    if (
+      !date ||
+      !/^\d{2}$/.test(toHours[i] ?? "") ||
+      !/^\d{2}$/.test(toMinutes[i] ?? "") ||
+      !duration
+    ) {
+      return { success: false, message: "Fill in every reschedule date, time, and duration." };
+    }
+    if (date === fromDate) {
+      return { success: false, message: "Pick a different date to reschedule to." };
+    }
+    parts.push({ date, startTime: `${toHours[i]}:${toMinutes[i]}`, duration });
+  }
+
+  if (new Set(parts.map((p) => p.date)).size !== parts.length) {
+    return { success: false, message: "Each reschedule date must be different." };
   }
 
   const supabase = await createClient();
@@ -172,9 +204,13 @@ export async function rescheduleSession(
 
   if (!enrollment) return { success: false, message: "Enrollment not found." };
 
+  // Every row this reschedule touches shares a group id, so canceling it
+  // later can find and remove every part together.
+  const groupId = randomUUID();
+
   // The skipped original slot is recorded as "rescheduled" (distinct from
   // absent — the student isn't missing, the class just moved) and points at
-  // where it moved to; the new date gets its own present session.
+  // the first part it moved to; each new date gets its own present session.
   const { error: fromError } = await supabase.from("sessions").upsert(
     {
       enrollment_id: enrollmentId,
@@ -182,27 +218,40 @@ export async function rescheduleSession(
       status: "rescheduled",
       absence_reason: null,
       is_makeup: false,
-      rescheduled_to_date: toDate,
+      rescheduled_to_date: parts[0].date,
+      reschedule_group_id: groupId,
+      start_time: null,
+      duration_hours: null,
     },
     { onConflict: "enrollment_id,date" },
   );
   if (fromError) return { success: false, message: "Failed to reschedule class." };
 
-  const isMakeup = enrollment.day_of_week !== parseISO(toDate).getDay();
-  const { error: toError } = await supabase.from("sessions").upsert(
-    {
-      enrollment_id: enrollmentId,
-      date: toDate,
-      status: "present",
-      is_makeup: isMakeup,
-      rescheduled_to_date: null,
-    },
-    { onConflict: "enrollment_id,date" },
-  );
+  const toRows = parts.map((part) => ({
+    enrollment_id: enrollmentId,
+    date: part.date,
+    status: "present" as const,
+    absence_reason: null,
+    is_makeup: enrollment.day_of_week !== parseISO(part.date).getDay(),
+    rescheduled_to_date: null,
+    reschedule_group_id: groupId,
+    start_time: part.startTime,
+    duration_hours: part.duration,
+  }));
+
+  const { error: toError } = await supabase
+    .from("sessions")
+    .upsert(toRows, { onConflict: "enrollment_id,date" });
   if (toError) return { success: false, message: "Failed to reschedule class." };
 
   revalidateAttendanceViews();
-  return { success: true, message: `Rescheduled to ${toDate}.` };
+  return {
+    success: true,
+    message:
+      parts.length === 1
+        ? `Rescheduled to ${parts[0].date}.`
+        : `Rescheduled to ${parts.length} dates.`,
+  };
 }
 
 export async function deleteSessionWithUndo(
@@ -245,17 +294,13 @@ export async function restoreSession(
   return { success: true, message: "Session restored." };
 }
 
-// A reschedule is two linked rows: the original date's "rescheduled" marker
-// and the new date's "present" session. Canceling needs to remove both, not
-// just the one the user clicked on.
+// A reschedule can be several linked rows: the original date's "rescheduled"
+// marker plus every make-up part it created, all sharing reschedule_group_id.
+// Canceling needs to remove all of them, not just the one the user clicked.
 export async function cancelReschedule(
   sessionId: string,
 ): Promise<
-  | {
-      success: true;
-      message: string;
-      snapshot: { from: ClassSession; to: ClassSession | null };
-    }
+  | { success: true; message: string; snapshot: ClassSession[] }
   | { success: false; message: string }
 > {
   if (!sessionId) return { success: false, message: "Missing session." };
@@ -271,36 +316,47 @@ export async function cancelReschedule(
     return { success: false, message: "Session is not rescheduled." };
   }
 
-  let toSession: ClassSession | null = null;
-  if (fromSession.rescheduled_to_date) {
+  let group: ClassSession[];
+  if (fromSession.reschedule_group_id) {
     const { data } = await supabase
+      .from("sessions")
+      .select("*")
+      .eq("reschedule_group_id", fromSession.reschedule_group_id);
+    group = (data?.length ? data : [fromSession]) as ClassSession[];
+  } else if (fromSession.rescheduled_to_date) {
+    // Reschedule created before parts were linked by group id.
+    const { data: toSession } = await supabase
       .from("sessions")
       .select("*")
       .eq("enrollment_id", fromSession.enrollment_id)
       .eq("date", fromSession.rescheduled_to_date)
       .maybeSingle();
-    toSession = data;
+    group = toSession ? [fromSession, toSession] : [fromSession];
+  } else {
+    group = [fromSession];
   }
 
-  const idsToDelete = [fromSession.id, ...(toSession ? [toSession.id] : [])];
-  const { error } = await supabase.from("sessions").delete().in("id", idsToDelete);
+  const ids = group.map((s) => s.id);
+  const { error } = await supabase.from("sessions").delete().in("id", ids);
 
   if (error) return { success: false, message: "Failed to cancel reschedule." };
 
   revalidateAttendanceViews();
   return {
     success: true,
-    message: "Reschedule canceled.",
-    snapshot: { from: fromSession, to: toSession },
+    message:
+      group.length > 1
+        ? `Reschedule canceled (${group.length} sessions removed).`
+        : "Reschedule canceled.",
+    snapshot: group,
   };
 }
 
 export async function restoreCanceledReschedule(
-  snapshot: { from: ClassSession; to: ClassSession | null },
+  snapshot: ClassSession[],
 ): Promise<ActionResult> {
   const supabase = await createClient();
-  const rows = snapshot.to ? [snapshot.from, snapshot.to] : [snapshot.from];
-  const { error } = await supabase.from("sessions").insert(rows);
+  const { error } = await supabase.from("sessions").insert(snapshot);
 
   if (error) return { success: false, message: "Failed to restore reschedule." };
 
