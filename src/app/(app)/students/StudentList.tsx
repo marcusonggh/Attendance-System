@@ -182,6 +182,12 @@ export function StudentList({
                 >
                   Manage schedule
                 </Link>
+                <Link
+                  href={`/students/${student.id}/notes`}
+                  className="text-xs text-teal-700 underline hover:text-teal-800 dark:text-teal-400"
+                >
+                  View notes
+                </Link>
               </div>
             </div>
           </Card>

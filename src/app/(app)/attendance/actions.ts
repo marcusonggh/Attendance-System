@@ -65,6 +65,27 @@ export async function markAttendance(
   };
 }
 
+export async function updateSessionNotes(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const sessionId = String(formData.get("session_id") ?? "");
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (!sessionId) return { success: false, message: "Missing session." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sessions")
+    .update({ notes: notes || null })
+    .eq("id", sessionId);
+
+  if (error) return { success: false, message: "Failed to save note." };
+
+  revalidateAttendanceViews();
+  return { success: true, message: "Note saved." };
+}
+
 export async function markAllPresent(
   _prev: ActionResult,
   formData: FormData,

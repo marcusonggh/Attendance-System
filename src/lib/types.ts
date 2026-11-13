@@ -78,6 +78,7 @@ export interface ClassSession {
   // display only — null means "use the enrollment's own slot".
   start_time: string | null;
   duration_hours: DurationHours | null;
+  notes: string | null;
   created_at: string;
 }
 
