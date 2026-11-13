@@ -6,6 +6,7 @@ import { ActionForm } from "@/components/ui/ActionForm";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { subjectLabel } from "@/lib/rateCard";
+import { DURATION_OPTIONS, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/lib/types";
 import type { Enrollment, Student } from "@/lib/types";
 import { addMakeupSession } from "./actions";
 
@@ -51,6 +52,29 @@ export function AddMakeupEnrollment({
           </option>
         ))}
       </Select>
+      <div className="flex gap-1">
+        <Select name="hour" defaultValue="15" required className="text-xs">
+          {HOUR_OPTIONS.map((h) => (
+            <option key={h.value} value={h.value}>
+              {h.label}
+            </option>
+          ))}
+        </Select>
+        <Select name="minute" defaultValue="00" required className="text-xs">
+          {MINUTE_OPTIONS.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </Select>
+        <Select name="duration" defaultValue="1" required className="flex-1 text-xs">
+          {DURATION_OPTIONS.map((d) => (
+            <option key={d.value} value={d.value}>
+              {d.label}
+            </option>
+          ))}
+        </Select>
+      </div>
       <div className="flex gap-1">
         <Button type="submit" size="sm" className="flex-1">
           Add

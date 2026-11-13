@@ -38,6 +38,7 @@ import { UndoableDeleteButton } from "@/components/ui/UndoableDeleteButton";
 import { ViewSwitcher } from "../ViewSwitcher";
 import { RescheduleForm } from "../RescheduleForm";
 import { SessionNotes } from "../SessionNotes";
+import { TimeDurationFields } from "../TimeDurationFields";
 
 const navLinkClass =
   "flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-600 hover:bg-zinc-100";
@@ -302,6 +303,7 @@ export default async function AttendanceDayPage({
               ))}
             </Select>
           </Field>
+          <TimeDurationFields />
           <Button type="submit">Add</Button>
         </ActionForm>
       </Card>

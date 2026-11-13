@@ -143,9 +143,15 @@ export async function addMakeupSession(
 ): Promise<ActionResult> {
   const date = String(formData.get("date") ?? "");
   const enrollmentId = String(formData.get("enrollment_id") ?? "");
+  const hour = String(formData.get("hour") ?? "");
+  const minute = String(formData.get("minute") ?? "");
+  const duration = parseDurationPart(String(formData.get("duration") ?? ""));
 
   if (!date || !enrollmentId) {
     return { success: false, message: "Select an enrollment." };
+  }
+  if (!/^\d{2}$/.test(hour) || !/^\d{2}$/.test(minute) || !duration) {
+    return { success: false, message: "Pick a time and duration." };
   }
 
   const supabase = await createClient();
@@ -165,6 +171,8 @@ export async function addMakeupSession(
       date,
       status: "present",
       is_makeup: isMakeup,
+      start_time: `${hour}:${minute}`,
+      duration_hours: duration,
     },
     { onConflict: "enrollment_id,date" },
   );
