@@ -3,10 +3,10 @@ import type { ReactNode } from "react";
 export const inputClass =
   "rounded-md border border-zinc-300 bg-transparent px-2.5 py-1.5 text-sm shadow-sm focus:border-teal-600 focus:outline-2 focus:outline-offset-1 focus:outline-teal-600/40 dark:border-zinc-700";
 
-// Selects need extra right padding so the browser's native dropdown arrow
-// doesn't sit flush against the border, especially on narrow selects.
+// Used by the Select component (native arrow hidden, custom one drawn in
+// its place) — right padding clears room for that icon.
 export const selectClass =
-  "rounded-md border border-zinc-300 bg-transparent pl-2.5 pr-7 py-1.5 text-sm shadow-sm focus:border-teal-600 focus:outline-2 focus:outline-offset-1 focus:outline-teal-600/40 dark:border-zinc-700";
+  "rounded-md border border-zinc-300 bg-transparent pl-2.5 pr-8 py-1.5 text-sm shadow-sm focus:border-teal-600 focus:outline-2 focus:outline-offset-1 focus:outline-teal-600/40 dark:border-zinc-700";
 
 export function Field({
   label,

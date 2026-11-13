@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { Button } from "@/components/ui/Button";
-import { selectClass } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { subjectLabel } from "@/lib/rateCard";
 import type { Enrollment, Student } from "@/lib/types";
 import { addMakeupSession } from "./actions";
@@ -42,11 +42,7 @@ export function AddMakeupEnrollment({
       }}
     >
       <input type="hidden" name="date" value={date} />
-      <select
-        name="enrollment_id"
-        required
-        className={`w-full text-xs ${selectClass}`}
-      >
+      <Select name="enrollment_id" required className="w-full text-xs">
         <option value="">Select enrollment</option>
         {enrollments.map((e) => (
           <option key={e.id} value={e.id}>
@@ -54,7 +50,7 @@ export function AddMakeupEnrollment({
             {subjectLabel(e.subject)}
           </option>
         ))}
-      </select>
+      </Select>
       <div className="flex gap-1">
         <Button type="submit" size="sm" className="flex-1">
           Add

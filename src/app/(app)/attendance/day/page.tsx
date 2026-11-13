@@ -23,7 +23,8 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Field, inputClass, selectClass } from "@/components/ui/Field";
+import { Field, inputClass } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { StatusSubmitButton } from "@/components/ui/StatusSubmitButton";
@@ -266,7 +267,7 @@ export default async function AttendanceDayPage({
         >
           <input type="hidden" name="date" value={date} />
           <Field label="Enrollment">
-            <select name="enrollment_id" required className={selectClass}>
+            <Select name="enrollment_id" required>
               <option value="">Select enrollment</option>
               {activeEnrollments.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -274,7 +275,7 @@ export default async function AttendanceDayPage({
                   {subjectLabel(e.subject)}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Button type="submit">Add</Button>
         </ActionForm>

@@ -21,9 +21,10 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Field, inputClass, selectClass } from "@/components/ui/Field";
+import { Field, inputClass } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ActionForm } from "@/components/ui/ActionForm";
+import { Select } from "@/components/ui/Select";
 import { UndoableDeleteButton } from "@/components/ui/UndoableDeleteButton";
 
 const fieldGridClass = "grid grid-cols-2 gap-3 sm:grid-cols-4";
@@ -38,30 +39,30 @@ function StartTimeFields({
   return (
     <Field label="Start time">
       <div className="flex gap-1.5">
-        <select
+        <Select
           name="start_time_hour"
           defaultValue={defaultHour}
           required
-          className={`flex-1 ${selectClass}`}
+          className="flex-1"
         >
           {HOUR_OPTIONS.map((h) => (
             <option key={h.value} value={h.value}>
               {h.label}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           name="start_time_minute"
           defaultValue={defaultMinute}
           required
-          className={`flex-1 ${selectClass}`}
+          className="flex-1"
         >
           {MINUTE_OPTIONS.map((m) => (
             <option key={m.value} value={m.value}>
               {m.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
     </Field>
   );
@@ -110,54 +111,54 @@ export default async function SchedulePage() {
           <ActionForm action={addEnrollment} resetOnSuccess className="space-y-4">
             <div className={fieldGridClass}>
               <Field label="Student">
-                <select name="student_id" required className={selectClass}>
+                <Select name="student_id" required>
                   <option value="">Select student</option>
                   {students.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Subject">
-                <select name="subject" required className={selectClass}>
+                <Select name="subject" required>
                   {SUBJECTS.map((s) => (
                     <option key={s.value} value={s.value}>
                       {s.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Level">
-                <select name="level" required className={selectClass}>
+                <Select name="level" required>
                   <option value="preschool">Preschool</option>
                   <option value="primary">Primary</option>
-                </select>
+                </Select>
               </Field>
               <Field label="Group size">
-                <select name="group_size" className={selectClass}>
+                <Select name="group_size">
                   <option value="1">1:1</option>
                   <option value="2">1:2</option>
-                </select>
+                </Select>
               </Field>
               <Field label="Day">
-                <select name="day_of_week" required className={selectClass}>
+                <Select name="day_of_week" required>
                   {WEEKDAY_LABELS.map((label, day) => (
                     <option key={day} value={day}>
                       {label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <StartTimeFields />
               <Field label="Duration">
-                <select name="duration_hours" required className={selectClass}>
+                <Select name="duration_hours" required>
                   {DURATION_OPTIONS.map((d) => (
                     <option key={d.value} value={d.value}>
                       {d.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Start date">
                 <input
@@ -214,71 +215,66 @@ export default async function SchedulePage() {
                       </div>
                       <div className={fieldGridClass}>
                         <Field label="Subject">
-                          <select
+                          <Select
                             name="subject"
                             defaultValue={enrollment.subject}
                             required
-                            className={selectClass}
                           >
                             {SUBJECTS.map((s) => (
                               <option key={s.value} value={s.value}>
                                 {s.label}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </Field>
                         <Field label="Level">
-                          <select
+                          <Select
                             name="level"
                             defaultValue={enrollment.level}
                             required
-                            className={selectClass}
                           >
                             <option value="preschool">Preschool</option>
                             <option value="primary">Primary</option>
-                          </select>
+                          </Select>
                         </Field>
                         <Field label="Group size">
-                          <select
+                          <Select
                             name="group_size"
                             defaultValue={String(enrollment.group_size)}
-                            className={selectClass}
                           >
                             <option value="1">1:1</option>
                             <option value="2">1:2</option>
-                          </select>
+                          </Select>
                         </Field>
                         <Field label="Day">
-                          <select
+                          <Select
                             name="day_of_week"
                             defaultValue={enrollment.day_of_week}
                             required
-                            className={selectClass}
                           >
                             {WEEKDAY_LABELS.map((label, day) => (
                               <option key={day} value={day}>
                                 {label}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </Field>
                         <StartTimeFields
                           defaultHour={enrollment.start_time.slice(0, 2)}
                           defaultMinute={enrollment.start_time.slice(3, 5)}
                         />
                         <Field label="Duration">
-                          <select
+                          <Select
                             name="duration_hours"
                             defaultValue={String(enrollment.duration_hours)}
                             required
-                            className={selectClass}
                           >
                             {DURATION_OPTIONS.map((d) => (
                               <option key={d.value} value={d.value}>
                                 {d.label}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </Field>
                         <Field label="Start date">
                           <input
