@@ -125,6 +125,12 @@ export default async function AttendanceDayPage({
             <a href={`/attendance/day?date=${prevDate}`} className={navLinkClass}>
               <ChevronLeft className="h-4 w-4" />
             </a>
+            <a
+              href="/attendance/day"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
+            >
+              Today
+            </a>
             <form className="flex items-center gap-2">
               <input
                 type="date"
