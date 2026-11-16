@@ -41,7 +41,7 @@ import { SessionNotes } from "../SessionNotes";
 import { TimeDurationFields } from "../TimeDurationFields";
 
 const navLinkClass =
-  "flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-600 hover:bg-zinc-100";
+  "flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800";
 
 export default async function AttendanceDayPage({
   searchParams,
@@ -127,7 +127,7 @@ export default async function AttendanceDayPage({
             </a>
             <a
               href="/attendance/day"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               Today
             </a>
@@ -162,7 +162,7 @@ export default async function AttendanceDayPage({
       )}
 
       {cards.length === 0 && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
           No classes scheduled for this day. Add an enrollment on the Schedule
           page, or add a make-up class below.
         </p>
@@ -216,7 +216,7 @@ export default async function AttendanceDayPage({
                         onRestore={restoreCanceledReschedule}
                         confirmMessage="Cancel this reschedule? This removes both the original slot and the moved class."
                         ariaLabel="Cancel reschedule"
-                        className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                        className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-red-800 dark:hover:bg-red-950 dark:hover:text-red-400"
                         icon={<CalendarX className="h-3.5 w-3.5" />}
                       />
                     ) : (
@@ -226,7 +226,7 @@ export default async function AttendanceDayPage({
                         onRestore={restoreSession}
                         confirmMessage="Delete this session? This can't be undone."
                         ariaLabel="Delete session"
-                        className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                        className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-red-800 dark:hover:bg-red-950 dark:hover:text-red-400"
                         icon={<Trash2 className="h-3.5 w-3.5" />}
                       />
                     ))}
@@ -249,7 +249,7 @@ export default async function AttendanceDayPage({
                           value="present"
                           active={session?.status === "present"}
                           activeClassName="bg-green-600 text-white"
-                          inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100"
+                          inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                           icon={<CheckCircle2 className="h-3.5 w-3.5" />}
                         >
                           Present
@@ -258,7 +258,7 @@ export default async function AttendanceDayPage({
                           value="absent"
                           active={session?.status === "absent"}
                           activeClassName="bg-amber-600 text-white"
-                          inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100"
+                          inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                           icon={<XCircle className="h-3.5 w-3.5" />}
                         >
                           Absent

@@ -195,7 +195,7 @@ export function EnrollmentGroups({ groups }: { groups: Group[] }) {
                     onRestore={restoreEnrollment}
                     confirmMessage="Delete this enrollment? Its session and invoice history will be deleted too. This can't be undone."
                     ariaLabel="Delete enrollment"
-                    className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                    className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-red-800 dark:hover:bg-red-950 dark:hover:text-red-400"
                     icon={<Trash2 className="h-4 w-4" />}
                   />
                 </div>

@@ -51,7 +51,7 @@ export default async function InvoiceHistoryPage({
     <div className="space-y-6">
       <Link
         href="/invoices"
-        className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-teal-700"
+        className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-teal-700 dark:text-zinc-400 dark:hover:text-teal-400"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Back to invoices
@@ -62,7 +62,7 @@ export default async function InvoiceHistoryPage({
         description="Every finalized invoice, across all months."
       />
 
-      <div className="inline-flex rounded-md border border-zinc-300 p-0.5">
+      <div className="inline-flex rounded-md border border-zinc-300 p-0.5 dark:border-zinc-700">
         {tabs.map((tab) => (
           <Link
             key={tab.key}
@@ -70,7 +70,7 @@ export default async function InvoiceHistoryPage({
             className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
               tab.key === statusFilter
                 ? "bg-teal-600 text-white"
-                : "text-zinc-600 hover:bg-zinc-100"
+                : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
             }`}
           >
             {tab.label}

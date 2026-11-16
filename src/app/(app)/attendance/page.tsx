@@ -26,7 +26,7 @@ import { ViewSwitcher } from "./ViewSwitcher";
 import { GettingStartedChecklist } from "./GettingStartedChecklist";
 
 const navLinkClass =
-  "flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-600 hover:bg-zinc-100";
+  "flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800";
 
 const MAX_VISIBLE_ENROLLMENTS = 5;
 
@@ -84,7 +84,7 @@ export default async function AttendanceCalendarPage({
             </Link>
             <Link
               href="/attendance"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               This week
             </Link>
@@ -148,7 +148,7 @@ export default async function AttendanceCalendarPage({
               key={dateStr}
               className={isToday ? "ring-2 ring-teal-500" : undefined}
             >
-              <p className="text-xs font-medium text-zinc-500">
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 {format(day, "EEE")}
               </p>
               <p className="mb-3 text-sm font-semibold">{format(day, "MMM d")}</p>
@@ -166,12 +166,12 @@ export default async function AttendanceCalendarPage({
                       );
                       const mixed = !statuses.every((s) => s === statuses[0]);
                       const cellClass = !session
-                        ? "border border-dashed border-zinc-300 text-zinc-400"
+                        ? "border border-dashed border-zinc-300 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500"
                         : session.status === "present"
-                          ? "bg-teal-50 text-teal-800"
+                          ? "bg-teal-50 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300"
                           : session.status === "absent"
-                            ? "bg-amber-50 text-amber-800"
-                            : "bg-sky-50 text-sky-800";
+                            ? "bg-amber-50 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                            : "bg-sky-50 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300";
                       return (
                         <div
                           key={group[0].id}
@@ -200,7 +200,7 @@ export default async function AttendanceCalendarPage({
                       );
                     })}
                     {extra > 0 && (
-                      <p className="px-2 text-xs text-zinc-500">+{extra} more</p>
+                      <p className="px-2 text-xs text-zinc-500 dark:text-zinc-400">+{extra} more</p>
                     )}
                   </Link>
                 ) : null}

@@ -14,7 +14,7 @@ const LOW_ATTENDANCE_THRESHOLD = 70;
 const MIN_SESSIONS_TO_FLAG = 2;
 
 const navLinkClass =
-  "flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-600 hover:bg-zinc-100";
+  "flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800";
 
 function StatTile({
   label,

@@ -16,7 +16,7 @@ export function ViewSwitcher({
   ];
 
   return (
-    <div className="inline-flex rounded-md border border-zinc-300 p-0.5">
+    <div className="inline-flex rounded-md border border-zinc-300 p-0.5 dark:border-zinc-700">
       {tabs.map((tab) => (
         <Link
           key={tab.key}
@@ -24,7 +24,7 @@ export function ViewSwitcher({
           className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
             tab.key === active
               ? "bg-teal-600 text-white"
-              : "text-zinc-600 hover:bg-zinc-100"
+              : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
           }`}
         >
           {tab.label}

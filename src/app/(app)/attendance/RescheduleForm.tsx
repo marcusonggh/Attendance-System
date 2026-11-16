@@ -113,7 +113,7 @@ export function RescheduleForm({
                 type="button"
                 onClick={() => removePart(i)}
                 aria-label="Remove date"
-                className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700"
+                className="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -132,7 +132,9 @@ export function RescheduleForm({
           Split into another date
         </button>
         {parts.length > 1 && (
-          <p className={`text-xs ${mismatched ? "text-amber-600" : "text-zinc-500"}`}>
+          <p
+            className={`text-xs ${mismatched ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400"}`}
+          >
             Total: {total}hr{total === 1 ? "" : "s"} · original class was{" "}
             {originalDuration}hr{Number(originalDuration) === 1 ? "" : "s"}
           </p>

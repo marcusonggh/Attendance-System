@@ -26,7 +26,7 @@ export function AddMakeupEnrollment({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-zinc-300 py-1.5 text-xs text-zinc-400 hover:border-teal-400 hover:text-teal-600"
+        className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-zinc-300 py-1.5 text-xs text-zinc-400 hover:border-teal-400 hover:text-teal-600 dark:border-zinc-700 dark:hover:border-teal-500"
       >
         <Plus className="h-3.5 w-3.5" />
         Add make-up
@@ -82,7 +82,7 @@ export function AddMakeupEnrollment({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="flex items-center justify-center rounded-md border border-zinc-300 px-2 text-zinc-500 hover:bg-zinc-100"
+          className="flex items-center justify-center rounded-md border border-zinc-300 px-2 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
           <X className="h-3.5 w-3.5" />
         </button>

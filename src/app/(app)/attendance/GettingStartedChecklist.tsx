@@ -15,7 +15,9 @@ function ChecklistItem({
     <Link
       href={href}
       className={`flex items-center gap-2 text-sm ${
-        done ? "text-zinc-500 line-through" : "text-teal-800 hover:underline"
+        done
+          ? "text-zinc-500 line-through dark:text-zinc-400"
+          : "text-teal-800 hover:underline dark:text-teal-400"
       }`}
     >
       {done ? (

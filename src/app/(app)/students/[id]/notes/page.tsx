@@ -50,7 +50,7 @@ export default async function StudentNotesPage({
     <div className="space-y-6">
       <Link
         href="/students"
-        className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-teal-700"
+        className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-teal-700 dark:text-zinc-400 dark:hover:text-teal-400"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Back to students

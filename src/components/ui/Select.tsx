@@ -18,7 +18,7 @@ export const Select = forwardRef<
         className={`w-full appearance-none ${selectClass}`}
         {...props}
       />
-      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
     </span>
   );
 });
