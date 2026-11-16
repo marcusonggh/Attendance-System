@@ -19,6 +19,7 @@ import {
 } from "@/lib/rateCard";
 import {
   markAttendance,
+  updateAbsenceReason,
   markAllPresent,
   addMakeupSession,
   deleteSessionWithUndo,
@@ -232,7 +233,7 @@ export default async function AttendanceDayPage({
                     ))}
                 </div>
 
-                {session && (
+                {session?.status === "present" && (
                   <SessionNotes sessionId={session.id} initialNotes={session.notes} />
                 )}
 
@@ -240,39 +241,47 @@ export default async function AttendanceDayPage({
                   <>
                     <ActionForm
                       action={markAttendance}
-                      className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                      className="flex items-center gap-2"
                     >
                       <input type="hidden" name="date" value={date} />
                       <input type="hidden" name="enrollment_id" value={enrollment.id} />
-                      <div className="flex items-center gap-2">
-                        <StatusSubmitButton
-                          value="present"
-                          active={session?.status === "present"}
-                          activeClassName="bg-green-600 text-white"
-                          inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-                        >
-                          Present
-                        </StatusSubmitButton>
-                        <StatusSubmitButton
-                          value="absent"
-                          active={session?.status === "absent"}
-                          activeClassName="bg-amber-600 text-white"
-                          inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                          icon={<XCircle className="h-3.5 w-3.5" />}
-                        >
-                          Absent
-                        </StatusSubmitButton>
-                      </div>
-                      {session?.status === "absent" && (
+                      <StatusSubmitButton
+                        value="present"
+                        active={session?.status === "present"}
+                        activeClassName="bg-green-600 text-white"
+                        inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                      >
+                        Present
+                      </StatusSubmitButton>
+                      <StatusSubmitButton
+                        value="absent"
+                        active={session?.status === "absent"}
+                        activeClassName="bg-amber-600 text-white"
+                        inactiveClassName="border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        icon={<XCircle className="h-3.5 w-3.5" />}
+                      >
+                        Absent
+                      </StatusSubmitButton>
+                    </ActionForm>
+
+                    {session?.status === "absent" && (
+                      <ActionForm
+                        action={updateAbsenceReason}
+                        className="flex items-center gap-2"
+                      >
+                        <input type="hidden" name="session_id" value={session.id} />
                         <input
                           name="reason"
                           placeholder="Absence reason (optional)"
                           defaultValue={session?.absence_reason ?? ""}
                           className={`flex-1 text-xs ${inputClass}`}
                         />
-                      )}
-                    </ActionForm>
+                        <Button type="submit" variant="secondary" size="sm">
+                          Save
+                        </Button>
+                      </ActionForm>
+                    )}
 
                     <RescheduleForm
                       enrollmentId={enrollment.id}

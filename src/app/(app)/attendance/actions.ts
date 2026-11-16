@@ -24,7 +24,6 @@ export async function markAttendance(
   const date = String(formData.get("date") ?? "");
   const enrollmentId = String(formData.get("enrollment_id") ?? "");
   const status = String(formData.get("status") ?? "");
-  const reason = String(formData.get("reason") ?? "").trim();
 
   if (
     !date ||
@@ -35,6 +34,24 @@ export async function markAttendance(
   }
 
   const supabase = await createClient();
+
+  // Clicking the already-active status again unmarks it — a quick undo
+  // for a misclick. The absence reason is edited separately now (its own
+  // small save form), so this button is purely a status toggle.
+  const { data: existing } = await supabase
+    .from("sessions")
+    .select("id, status")
+    .eq("enrollment_id", enrollmentId)
+    .eq("date", date)
+    .maybeSingle();
+
+  if (existing?.status === status) {
+    const { error } = await supabase.from("sessions").delete().eq("id", existing.id);
+    if (error) return { success: false, message: "Failed to update attendance." };
+    revalidateAttendanceViews();
+    return { success: true, message: "Unmarked." };
+  }
+
   const { data: enrollment } = await supabase
     .from("enrollments")
     .select("day_of_week")
@@ -50,7 +67,6 @@ export async function markAttendance(
       enrollment_id: enrollmentId,
       date,
       status,
-      absence_reason: status === "absent" ? reason || null : null,
       is_makeup: isMakeup,
     },
     { onConflict: "enrollment_id,date" },
@@ -63,6 +79,27 @@ export async function markAttendance(
     success: true,
     message: status === "present" ? "Marked present." : "Marked absent.",
   };
+}
+
+export async function updateAbsenceReason(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const sessionId = String(formData.get("session_id") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  if (!sessionId) return { success: false, message: "Missing session." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sessions")
+    .update({ absence_reason: reason || null })
+    .eq("id", sessionId);
+
+  if (error) return { success: false, message: "Failed to save reason." };
+
+  revalidateAttendanceViews();
+  return { success: true, message: "Reason saved." };
 }
 
 export async function updateSessionNotes(
