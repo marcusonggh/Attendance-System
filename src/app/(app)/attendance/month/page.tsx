@@ -10,7 +10,10 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getLastView } from "../lastView";
+import { SaveLastView } from "../SaveLastView";
 import type { ClassSession, Enrollment, Student } from "@/lib/types";
 import {
   groupPairedEnrollments,
@@ -35,6 +38,15 @@ export default async function AttendanceMonthPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   const { month: monthParam } = await searchParams;
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+
+  // A bare "/attendance/month" (no month) resumes the last-viewed month,
+  // as long as Month was actually the last view — otherwise just today.
+  if (!monthParam) {
+    const last = await getLastView();
+    if (last?.view === "month") redirect(`/attendance/month?month=${last.anchor}`);
+  }
+
   const anchor = monthParam ? parseISO(monthParam) : new Date();
   const anchorStr = format(anchor, "yyyy-MM-dd");
   const monthStart = startOfMonth(anchor);
@@ -46,7 +58,6 @@ export default async function AttendanceMonthPage({
   const nextMonth = format(addMonths(anchor, 1), "yyyy-MM-dd");
   const gridStartStr = format(gridStart, "yyyy-MM-dd");
   const gridEndStr = format(gridEnd, "yyyy-MM-dd");
-  const todayStr = format(new Date(), "yyyy-MM-dd");
 
   const supabase = await createClient();
 
@@ -77,7 +88,7 @@ export default async function AttendanceMonthPage({
               <ChevronLeft className="h-4 w-4" />
             </Link>
             <Link
-              href="/attendance/month"
+              href={`/attendance/month?month=${todayStr}`}
               className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               This month
@@ -101,6 +112,7 @@ export default async function AttendanceMonthPage({
       />
 
       <ViewSwitcher active="month" anchor={anchorStr} />
+      <SaveLastView view="month" anchor={anchorStr} />
 
       <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-medium text-zinc-500 dark:text-zinc-400">
         {WEEKDAY_HEADERS.map((label) => (

@@ -8,7 +8,10 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getLastView } from "./lastView";
+import { SaveLastView } from "./SaveLastView";
 import type { ClassSession, Enrollment, RateCard, Student } from "@/lib/types";
 import {
   groupPairedEnrollments,
@@ -36,6 +39,17 @@ export default async function AttendanceCalendarPage({
   searchParams: Promise<{ week?: string }>;
 }) {
   const { week: weekParam } = await searchParams;
+
+  // A bare "/attendance" (the nav link's target, and a fresh browser open)
+  // resumes whichever view+date was last looked at, instead of always
+  // resetting to this week.
+  if (!weekParam) {
+    const last = await getLastView();
+    if (last?.view === "day") redirect(`/attendance/day?date=${last.anchor}`);
+    if (last?.view === "month") redirect(`/attendance/month?month=${last.anchor}`);
+    if (last?.view === "week") redirect(`/attendance?week=${last.anchor}`);
+  }
+
   const anchor = weekParam ? parseISO(weekParam) : new Date();
   const anchorStr = format(anchor, "yyyy-MM-dd");
   const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
@@ -83,7 +97,7 @@ export default async function AttendanceCalendarPage({
               <ChevronLeft className="h-4 w-4" />
             </Link>
             <Link
-              href="/attendance"
+              href={`/attendance?week=${todayStr}`}
               className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               This week
@@ -107,6 +121,7 @@ export default async function AttendanceCalendarPage({
       />
 
       <ViewSwitcher active="week" anchor={anchorStr} />
+      <SaveLastView view="week" anchor={anchorStr} />
 
       <GettingStartedChecklist
         hasStudents={allStudents.some((s) => s.active)}

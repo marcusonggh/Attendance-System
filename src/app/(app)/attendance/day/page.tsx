@@ -8,7 +8,10 @@ import {
   CalendarX,
   Trash2,
 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getLastView } from "../lastView";
+import { SaveLastView } from "../SaveLastView";
 import type { ClassSession, Enrollment, Student } from "@/lib/types";
 import {
   groupPairedEnrollments,
@@ -50,7 +53,16 @@ export default async function AttendanceDayPage({
   searchParams: Promise<{ date?: string }>;
 }) {
   const { date: dateParam } = await searchParams;
-  const date = dateParam ?? format(new Date(), "yyyy-MM-dd");
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+
+  // A bare "/attendance/day" (no date) resumes the last-viewed date, as
+  // long as Day was actually the last view — otherwise just today.
+  if (!dateParam) {
+    const last = await getLastView();
+    if (last?.view === "day") redirect(`/attendance/day?date=${last.anchor}`);
+  }
+
+  const date = dateParam ?? todayStr;
   const current = parseISO(date);
   const dayOfWeek = current.getDay();
   const prevDate = format(addDays(current, -1), "yyyy-MM-dd");
@@ -118,6 +130,7 @@ export default async function AttendanceDayPage({
   return (
     <div className="space-y-6">
       <ViewSwitcher active="day" anchor={date} />
+      <SaveLastView view="day" anchor={date} />
 
       <PageHeader
         title={format(current, "EEEE, MMMM d, yyyy")}
@@ -127,7 +140,7 @@ export default async function AttendanceDayPage({
               <ChevronLeft className="h-4 w-4" />
             </a>
             <a
-              href="/attendance/day"
+              href={`/attendance/day?date=${todayStr}`}
               className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               Today
