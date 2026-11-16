@@ -264,12 +264,14 @@ export default async function AttendanceDayPage({
                           Absent
                         </StatusSubmitButton>
                       </div>
-                      <input
-                        name="reason"
-                        placeholder="Absence reason (optional)"
-                        defaultValue={session?.absence_reason ?? ""}
-                        className={`flex-1 text-xs ${inputClass}`}
-                      />
+                      {session?.status === "absent" && (
+                        <input
+                          name="reason"
+                          placeholder="Absence reason (optional)"
+                          defaultValue={session?.absence_reason ?? ""}
+                          className={`flex-1 text-xs ${inputClass}`}
+                        />
+                      )}
                     </ActionForm>
 
                     <RescheduleForm

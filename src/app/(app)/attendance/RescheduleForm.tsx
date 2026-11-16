@@ -46,6 +46,21 @@ export function RescheduleForm({
     setParts((prev) => prev.filter((_, i) => i !== index));
   }
 
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1 border-t border-zinc-100 pt-2 text-xs text-teal-700 hover:text-teal-800 dark:border-zinc-800 dark:text-teal-400"
+      >
+        <CalendarClock className="h-3.5 w-3.5" />
+        Reschedule
+      </button>
+    );
+  }
+
   return (
     <ActionForm
       action={rescheduleSession}
@@ -141,10 +156,19 @@ export function RescheduleForm({
         )}
       </div>
 
-      <Button type="submit" variant="secondary" size="sm">
-        <CalendarClock className="h-3.5 w-3.5" />
-        Reschedule
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button type="submit" variant="secondary" size="sm">
+          <CalendarClock className="h-3.5 w-3.5" />
+          Reschedule
+        </Button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+        >
+          Cancel
+        </button>
+      </div>
     </ActionForm>
   );
 }
