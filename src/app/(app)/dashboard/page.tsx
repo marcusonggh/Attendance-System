@@ -187,12 +187,19 @@ export default async function DashboardPage({
     else entry.unpaid += Number(invoice.amount_owed);
     invoicedByYearMonth.set(invoice.year_month, entry);
   }
+  const currentMonthStart = startOfMonth(new Date());
   const revenue = monthsOfYear.map((m) => {
     const key = format(m, "yyyy-MM");
     const label = format(m, "MMM");
     const invoiced = invoicedByYearMonth.get(key);
     if (invoiced) {
       return { month: label, paid: invoiced.paid, unpaid: invoiced.unpaid, projected: 0 };
+    }
+    // Only project forward (this month or later) — projecting today's roster
+    // of active enrollments onto a past month that was never invoiced would
+    // just be fabricating history.
+    if (m < currentMonthStart) {
+      return { month: label, paid: 0, unpaid: 0, projected: 0 };
     }
     const mStartStr = format(startOfMonth(m), "yyyy-MM-dd");
     const mEndStr = format(endOfMonth(m), "yyyy-MM-dd");
