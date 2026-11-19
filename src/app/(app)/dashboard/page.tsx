@@ -1,7 +1,7 @@
 import { addMonths, endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getEffectiveRate, overlapsMonth } from "@/lib/rateCard";
+import { getEffectiveRate, overlapsMonth, subjectLabel } from "@/lib/rateCard";
 import type {
   Student,
   ClassSession,
@@ -11,6 +11,7 @@ import type {
   StudentRate,
 } from "@/lib/types";
 import DashboardCharts from "./DashboardCharts";
+import { ScheduleHeatmap } from "./ScheduleHeatmap";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -172,9 +173,22 @@ export default async function DashboardPage({
   // instead of a blank chart.
   const monthInvoices = invoices.filter((inv) => inv.year_month === month);
   const monthIsFinalized = monthInvoices.length > 0;
-  const projectedRevenue = enrollments
-    .filter((e) => e.active && overlapsMonth(e, monthStartStr, monthEndStr))
-    .reduce((sum, e) => sum + getEffectiveRate(studentRates, rateCard, e), 0);
+  const monthActiveEnrollments = enrollments.filter(
+    (e) => e.active && overlapsMonth(e, monthStartStr, monthEndStr),
+  );
+  const revenueBySubjectMap = new Map<string, number>();
+  for (const e of monthActiveEnrollments) {
+    const amount = getEffectiveRate(studentRates, rateCard, e);
+    revenueBySubjectMap.set(e.subject, (revenueBySubjectMap.get(e.subject) ?? 0) + amount);
+  }
+  const revenueBySubject = Array.from(revenueBySubjectMap.entries())
+    .map(([subject, amount]) => ({ label: subjectLabel(subject), amount }))
+    .sort((a, b) => b.amount - a.amount);
+  const maxSubjectRevenue = revenueBySubject[0]?.amount ?? 0;
+  const projectedRevenue = monthActiveEnrollments.reduce(
+    (sum, e) => sum + getEffectiveRate(studentRates, rateCard, e),
+    0,
+  );
 
   const invoicedByYearMonth = new Map<string, { paid: number; unpaid: number }>();
   for (const invoice of invoices) {
@@ -267,15 +281,43 @@ export default async function DashboardPage({
         <StatTile label="Active students" value={students.length} />
         <StatTile
           label="Collected"
-          value={`$${collected.toFixed(2)}`}
+          value={`RM${collected.toFixed(2)}`}
           tone="success"
         />
         <StatTile
           label={monthIsFinalized ? "Outstanding" : "Projected (not yet invoiced)"}
-          value={`$${outstanding.toFixed(2)}`}
+          value={`RM${outstanding.toFixed(2)}`}
           tone="warning"
         />
       </div>
+
+      {revenueBySubject.length > 0 && (
+        <Card>
+          <h2 className="mb-1 font-medium">Revenue by subject</h2>
+          <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
+            {monthIsFinalized ? "This month's billing" : "Projected billing"}, by
+            subject, at current rates.
+          </p>
+          <div className="space-y-3">
+            {revenueBySubject.map((s) => (
+              <div key={s.label} className="flex items-center gap-3">
+                <span className="w-24 flex-none truncate text-sm">{s.label}</span>
+                <div className="h-2 flex-1 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                  <div
+                    className="h-2 rounded-full bg-teal-500"
+                    style={{
+                      width: `${maxSubjectRevenue > 0 ? (s.amount / maxSubjectRevenue) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <span className="w-20 flex-none text-right text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
+                  RM{s.amount.toFixed(0)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {needsAttention.length > 0 && (
         <Card className="border-amber-200 dark:border-amber-800">
@@ -328,6 +370,15 @@ export default async function DashboardPage({
             </p>
           )}
         </div>
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 font-medium">Weekly schedule</h2>
+        <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
+          Currently active classes by day and time — lighter slots have room
+          for more students. Independent of the selectors above.
+        </p>
+        <ScheduleHeatmap enrollments={enrollments.filter((e) => e.active)} />
       </Card>
 
       <PageHeader
