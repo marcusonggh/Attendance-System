@@ -186,7 +186,7 @@ export default function DashboardCharts({ attendanceOverTime, revenue }: Props) 
           </p>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenue} margin={{ left: -20 }} barCategoryGap="30%">
+              <BarChart data={revenue} margin={{ left: 4 }} barCategoryGap="30%">
                 <CartesianGrid vertical={false} stroke={GRID_STROKE} strokeOpacity={0.15} />
                 <XAxis
                   dataKey="month"
@@ -196,6 +196,7 @@ export default function DashboardCharts({ attendanceOverTime, revenue }: Props) 
                   tickLine={false}
                 />
                 <YAxis
+                  width={56}
                   tick={{ fontSize: 12, fill: "currentColor" }}
                   className="text-zinc-500 dark:text-zinc-400"
                   axisLine={false}
@@ -236,7 +237,7 @@ export default function DashboardCharts({ attendanceOverTime, revenue }: Props) 
           <h2 className="mb-4 font-medium">Cumulative revenue</h2>
           <div className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenue} margin={{ left: -20 }}>
+              <AreaChart data={revenue} margin={{ left: 4 }}>
                 <defs>
                   <linearGradient id="cumulativeFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={TEAL} stopOpacity={0.12} />
@@ -252,6 +253,7 @@ export default function DashboardCharts({ attendanceOverTime, revenue }: Props) 
                   tickLine={false}
                 />
                 <YAxis
+                  width={56}
                   tick={{ fontSize: 12, fill: "currentColor" }}
                   className="text-zinc-500 dark:text-zinc-400"
                   axisLine={false}
