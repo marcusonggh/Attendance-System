@@ -4,7 +4,7 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  BarChart,
+  ComposedChart,
   Bar,
   XAxis,
   YAxis,
@@ -16,13 +16,20 @@ import { Card } from "@/components/ui/Card";
 
 interface Props {
   attendanceOverTime: { date: string; rate: number }[];
-  revenue: { month: string; paid: number; unpaid: number; projected: number }[];
+  revenue: {
+    month: string;
+    paid: number;
+    unpaid: number;
+    projected: number;
+    cumulative: number;
+  }[];
 }
 
 const TEAL = "#0d9488";
 const GREEN = "#16a34a";
 const AMBER = "#d97706";
 const SLATE = "#94a3b8";
+const INDIGO = "#4f46e5";
 
 export default function DashboardCharts({ attendanceOverTime, revenue }: Props) {
   return (
@@ -67,7 +74,7 @@ export default function DashboardCharts({ attendanceOverTime, revenue }: Props) 
           <h2 className="mb-4 font-medium">Revenue: paid vs outstanding</h2>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenue} margin={{ left: -20 }}>
+              <ComposedChart data={revenue} margin={{ left: -20, right: 10 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" className="opacity-30" />
                 <XAxis
                   dataKey="month"
@@ -75,11 +82,31 @@ export default function DashboardCharts({ attendanceOverTime, revenue }: Props) 
                   axisLine={false}
                   tickLine={false}
                 />
-                <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  yAxisId="monthly"
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  yAxisId="cumulative"
+                  orientation="right"
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="paid" name="Paid" stackId="a" fill={GREEN} radius={[4, 4, 0, 0]} />
                 <Bar
+                  yAxisId="monthly"
+                  dataKey="paid"
+                  name="Paid"
+                  stackId="a"
+                  fill={GREEN}
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  yAxisId="monthly"
                   dataKey="unpaid"
                   name="Unpaid"
                   stackId="a"
@@ -87,13 +114,23 @@ export default function DashboardCharts({ attendanceOverTime, revenue }: Props) 
                   radius={[4, 4, 0, 0]}
                 />
                 <Bar
+                  yAxisId="monthly"
                   dataKey="projected"
                   name="Projected (not yet invoiced)"
                   stackId="a"
                   fill={SLATE}
                   radius={[4, 4, 0, 0]}
                 />
-              </BarChart>
+                <Line
+                  yAxisId="cumulative"
+                  type="monotone"
+                  dataKey="cumulative"
+                  name="Cumulative revenue"
+                  stroke={INDIGO}
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </Card>

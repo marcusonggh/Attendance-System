@@ -53,9 +53,9 @@ function StatTile({
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; year?: string }>;
 }) {
-  const { month: monthParam } = await searchParams;
+  const { month: monthParam, year: yearParam } = await searchParams;
   const month = monthParam ?? format(new Date(), "yyyy-MM");
   const monthStart = startOfMonth(parseISO(`${month}-01`));
   const monthEnd = endOfMonth(monthStart);
@@ -65,17 +65,20 @@ export default async function DashboardPage({
   const monthStartStr = format(monthStart, "yyyy-MM-dd");
   const monthEndStr = format(monthEnd, "yyyy-MM-dd");
 
+  // The trend charts at the bottom cover the whole selected year rather
+  // than following the month selector above — a monthly breakdown is more
+  // useful there than one month's worth of daily dots.
+  const year = Number(yearParam) || new Date().getFullYear();
+  const prevYear = year - 1;
+  const nextYear = year + 1;
+  const yearStartStr = `${year}-01-01`;
+  const yearEndStr = `${year}-12-31`;
+  const monthsOfYear = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
+
   const supabase = await createClient();
 
-  // The trend charts stay a fixed trailing window regardless of the
-  // selected month — a longer history is more useful there than one
-  // month's worth of daily dots.
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  const sinceStr = ninetyDaysAgo.toISOString().slice(0, 10);
-
   const [
-    { data: trendSessionRows },
+    { data: yearSessionRows },
     { data: monthSessionRows },
     { data: studentsData },
     { data: invoiceRows },
@@ -83,7 +86,12 @@ export default async function DashboardPage({
     { data: rateCardData },
     { data: studentRateData },
   ] = await Promise.all([
-    supabase.from("sessions").select("*").gte("date", sinceStr).order("date"),
+    supabase
+      .from("sessions")
+      .select("*")
+      .gte("date", yearStartStr)
+      .lte("date", yearEndStr)
+      .order("date"),
     supabase
       .from("sessions")
       .select("*")
@@ -99,7 +107,7 @@ export default async function DashboardPage({
   // Rescheduled slots didn't actually happen on their original date — they
   // moved to a new date (which gets its own present/absent row there), so
   // they're excluded from attendance-rate math entirely.
-  const trendSessions = ((trendSessionRows ?? []) as ClassSession[]).filter(
+  const yearSessions = ((yearSessionRows ?? []) as ClassSession[]).filter(
     (s) => s.status !== "rescheduled",
   );
   const monthSessions = ((monthSessionRows ?? []) as ClassSession[]).filter(
@@ -125,19 +133,21 @@ export default async function DashboardPage({
   );
   const students = allStudents.filter((s) => activeStudentIdsThisMonth.has(s.id));
 
-  const byDate = new Map<string, { present: number; total: number }>();
-  for (const session of trendSessions) {
-    const entry = byDate.get(session.date) ?? { present: 0, total: 0 };
+  const attendanceByYearMonth = new Map<string, { present: number; total: number }>();
+  for (const session of yearSessions) {
+    const key = session.date.slice(0, 7);
+    const entry = attendanceByYearMonth.get(key) ?? { present: 0, total: 0 };
     entry.present += session.status === "present" ? 1 : 0;
     entry.total += 1;
-    byDate.set(session.date, entry);
+    attendanceByYearMonth.set(key, entry);
   }
-  const attendanceOverTime = Array.from(byDate.entries())
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([date, { present, total }]) => ({
-      date: format(parseISO(date), "MMM d"),
-      rate: total > 0 ? Math.round((present / total) * 100) : 0,
-    }));
+  const attendanceOverTime = monthsOfYear.map((m) => {
+    const entry = attendanceByYearMonth.get(format(m, "yyyy-MM"));
+    return {
+      date: format(m, "MMM"),
+      rate: entry && entry.total > 0 ? Math.round((entry.present / entry.total) * 100) : 0,
+    };
+  });
 
   const perStudent = students
     .map((student) => {
@@ -156,21 +166,6 @@ export default async function DashboardPage({
     })
     .sort((a, b) => b.rate - a.rate);
 
-  const revenueByMonth = new Map<
-    string,
-    { paid: number; unpaid: number; projected: number }
-  >();
-  for (const invoice of invoices) {
-    const entry = revenueByMonth.get(invoice.year_month) ?? {
-      paid: 0,
-      unpaid: 0,
-      projected: 0,
-    };
-    if (invoice.status === "paid") entry.paid += Number(invoice.amount_owed);
-    else entry.unpaid += Number(invoice.amount_owed);
-    revenueByMonth.set(invoice.year_month, entry);
-  }
-
   // Before a month's invoices are finalized there's nothing in `invoices`
   // yet to chart — fall back to what each active student's enrollments
   // would bill at today's rates, so the dashboard still shows a number
@@ -181,19 +176,37 @@ export default async function DashboardPage({
     .filter((e) => e.active && overlapsMonth(e, monthStartStr, monthEndStr))
     .reduce((sum, e) => sum + getEffectiveRate(studentRates, rateCard, e), 0);
 
-  if (!monthIsFinalized) {
-    const entry = revenueByMonth.get(month) ?? {
+  const invoicedByYearMonth = new Map<string, { paid: number; unpaid: number }>();
+  for (const invoice of invoices) {
+    if (!invoice.year_month.startsWith(`${year}-`)) continue;
+    const entry = invoicedByYearMonth.get(invoice.year_month) ?? {
       paid: 0,
       unpaid: 0,
-      projected: 0,
     };
-    entry.projected = projectedRevenue;
-    revenueByMonth.set(month, entry);
+    if (invoice.status === "paid") entry.paid += Number(invoice.amount_owed);
+    else entry.unpaid += Number(invoice.amount_owed);
+    invoicedByYearMonth.set(invoice.year_month, entry);
   }
+  const revenue = monthsOfYear.map((m) => {
+    const key = format(m, "yyyy-MM");
+    const label = format(m, "MMM");
+    const invoiced = invoicedByYearMonth.get(key);
+    if (invoiced) {
+      return { month: label, paid: invoiced.paid, unpaid: invoiced.unpaid, projected: 0 };
+    }
+    const mStartStr = format(startOfMonth(m), "yyyy-MM-dd");
+    const mEndStr = format(endOfMonth(m), "yyyy-MM-dd");
+    const projected = enrollments
+      .filter((e) => e.active && overlapsMonth(e, mStartStr, mEndStr))
+      .reduce((sum, e) => sum + getEffectiveRate(studentRates, rateCard, e), 0);
+    return { month: label, paid: 0, unpaid: 0, projected };
+  });
 
-  const revenue = Array.from(revenueByMonth.entries())
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([m, { paid, unpaid, projected }]) => ({ month: m, paid, unpaid, projected }));
+  let runningRevenue = 0;
+  const revenueWithCumulative = revenue.map((r) => {
+    runningRevenue += r.paid + r.unpaid + r.projected;
+    return { ...r, cumulative: runningRevenue };
+  });
 
   const monthPresent = monthSessions.filter((s) => s.status === "present").length;
   const attendanceRate =
@@ -220,10 +233,11 @@ export default async function DashboardPage({
         title={monthLabel}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <a href={`/dashboard?month=${prevMonth}`} className={navLinkClass}>
+            <a href={`/dashboard?month=${prevMonth}&year=${year}`} className={navLinkClass}>
               <ChevronLeft className="h-4 w-4" />
             </a>
             <form className="flex items-center gap-2">
+              <input type="hidden" name="year" value={year} />
               <input
                 type="month"
                 name="month"
@@ -234,7 +248,7 @@ export default async function DashboardPage({
                 Go
               </Button>
             </form>
-            <a href={`/dashboard?month=${nextMonth}`} className={navLinkClass}>
+            <a href={`/dashboard?month=${nextMonth}&year=${year}`} className={navLinkClass}>
               <ChevronRight className="h-4 w-4" />
             </a>
           </div>
@@ -309,7 +323,34 @@ export default async function DashboardPage({
         </div>
       </Card>
 
-      <DashboardCharts attendanceOverTime={attendanceOverTime} revenue={revenue} />
+      <PageHeader
+        title={`Yearly trends — ${year}`}
+        description="These charts track the full year, independent of the month selected above."
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <a href={`/dashboard?month=${month}&year=${prevYear}`} className={navLinkClass}>
+              <ChevronLeft className="h-4 w-4" />
+            </a>
+            <form className="flex items-center gap-2">
+              <input type="hidden" name="month" value={month} />
+              <input
+                type="number"
+                name="year"
+                defaultValue={year}
+                className={`w-24 ${inputClass}`}
+              />
+              <Button type="submit" variant="secondary" size="sm">
+                Go
+              </Button>
+            </form>
+            <a href={`/dashboard?month=${month}&year=${nextYear}`} className={navLinkClass}>
+              <ChevronRight className="h-4 w-4" />
+            </a>
+          </div>
+        }
+      />
+
+      <DashboardCharts attendanceOverTime={attendanceOverTime} revenue={revenueWithCumulative} />
     </div>
   );
 }
