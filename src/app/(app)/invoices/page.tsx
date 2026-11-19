@@ -55,7 +55,11 @@ function buildContactLink(
     };
   }
 
-  const digits = contact.replace(/[^\d+]/g, "").replace(/^\+/, "");
+  // wa.me needs the full international number, no leading zero. Malaysian
+  // mobile numbers are normally entered locally (e.g. "012-3456789") — swap
+  // the leading 0 for the country code "60" unless one's already present.
+  let digits = contact.replace(/[^\d+]/g, "").replace(/^\+/, "");
+  if (digits.startsWith("0")) digits = `60${digits.slice(1)}`;
   if (!digits) return null;
   return {
     type: "whatsapp" as const,
