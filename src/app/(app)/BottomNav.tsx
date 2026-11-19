@@ -8,7 +8,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white/95 backdrop-blur-sm sm:hidden dark:border-zinc-800 dark:bg-zinc-950/95">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm sm:hidden dark:border-zinc-800 dark:bg-zinc-950/95">
       {navItems.map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
         return (

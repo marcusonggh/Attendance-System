@@ -1,6 +1,9 @@
 import { HOUR_OPTIONS, type Enrollment } from "@/lib/types";
 
-const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// Weekdays only (day_of_week 1-5) — this tutoring schedule doesn't run
+// weekends, so Sat/Sun columns would just be two empty columns every row.
+const WEEKDAYS = [1, 2, 3, 4, 5];
+const WEEKDAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 function formatHour(hour: number): string {
   const period = hour >= 12 ? "pm" : "am";
@@ -18,9 +21,14 @@ export function ScheduleHeatmap({ enrollments }: { enrollments: Enrollment[] }) 
     counts.set(key, next);
     if (next > max) max = next;
   }
-  const hours = HOUR_OPTIONS.map((h) => Number(h.value));
 
-  if (enrollments.length === 0) {
+  // Hide hour rows with no class on any weekday — an empty row is just
+  // noise once the schedule has gaps (early morning, late evening, etc).
+  const hours = HOUR_OPTIONS.map((h) => Number(h.value)).filter((hour) =>
+    WEEKDAYS.some((day) => (counts.get(`${day}-${hour}`) ?? 0) > 0),
+  );
+
+  if (hours.length === 0) {
     return (
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
         No active classes scheduled yet.
@@ -30,14 +38,14 @@ export function ScheduleHeatmap({ enrollments }: { enrollments: Enrollment[] }) 
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[480px] border-collapse text-xs">
+      <table className="w-full min-w-[360px] border-collapse text-xs">
         <thead>
           <tr>
             <th className="w-10" />
-            {DAY_ABBR.map((d) => (
+            {WEEKDAY_ABBR.map((d) => (
               <th
                 key={d}
-                className="pb-1 text-center font-medium text-zinc-500 dark:text-zinc-400"
+                className="pb-1.5 text-center font-medium text-zinc-500 dark:text-zinc-400"
               >
                 {d}
               </th>
@@ -50,13 +58,13 @@ export function ScheduleHeatmap({ enrollments }: { enrollments: Enrollment[] }) 
               <td className="pr-2 text-right tabular-nums text-zinc-500 dark:text-zinc-400">
                 {formatHour(hour)}
               </td>
-              {DAY_ABBR.map((_, day) => {
+              {WEEKDAYS.map((day) => {
                 const count = counts.get(`${day}-${hour}`) ?? 0;
                 const intensity = max > 0 ? count / max : 0;
                 return (
-                  <td key={day} className="p-0.5">
+                  <td key={day} className="p-1">
                     <div
-                      className={`flex h-7 items-center justify-center rounded ${
+                      className={`flex h-8 items-center justify-center rounded ${
                         count === 0 ? "bg-zinc-100 dark:bg-zinc-800/60" : ""
                       }`}
                       style={
