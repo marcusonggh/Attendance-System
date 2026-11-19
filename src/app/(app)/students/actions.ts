@@ -85,13 +85,13 @@ export async function saveStudentRate(
 ): Promise<ActionResult> {
   const studentId = String(formData.get("student_id") ?? "");
   const level = String(formData.get("level") ?? "");
-  const groupSize = Number(formData.get("group_size"));
+  const bucket = String(formData.get("bucket") ?? "");
   const raw = String(formData.get("rate") ?? "").trim();
 
   if (
     !studentId ||
     (level !== "preschool" && level !== "primary") ||
-    (groupSize !== 1 && groupSize !== 2)
+    (bucket !== "small" && bucket !== "large")
   ) {
     return { success: false, message: "Missing student or tier." };
   }
@@ -105,7 +105,7 @@ export async function saveStudentRate(
       .delete()
       .eq("student_id", studentId)
       .eq("level", level)
-      .eq("group_size", groupSize);
+      .eq("bucket", bucket);
 
     if (error) return { success: false, message: "Failed to clear rate." };
     revalidatePath("/students");
@@ -119,8 +119,8 @@ export async function saveStudentRate(
   }
 
   const { error } = await supabase.from("student_rates").upsert(
-    { student_id: studentId, level, group_size: groupSize, rate },
-    { onConflict: "student_id,level,group_size" },
+    { student_id: studentId, level, bucket, rate },
+    { onConflict: "student_id,level,bucket" },
   );
 
   if (error) return { success: false, message: "Failed to save rate." };
@@ -134,16 +134,16 @@ export async function saveRateCard(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const preschool1 = Number(formData.get("rate_preschool_1"));
-  const preschool2 = Number(formData.get("rate_preschool_2"));
-  const primary1 = Number(formData.get("rate_primary_1"));
-  const primary2 = Number(formData.get("rate_primary_2"));
+  const preschoolSmall = Number(formData.get("rate_preschool_small"));
+  const preschoolLarge = Number(formData.get("rate_preschool_large"));
+  const primarySmall = Number(formData.get("rate_primary_small"));
+  const primaryLarge = Number(formData.get("rate_primary_large"));
 
   if (
-    Number.isNaN(preschool1) ||
-    Number.isNaN(preschool2) ||
-    Number.isNaN(primary1) ||
-    Number.isNaN(primary2)
+    Number.isNaN(preschoolSmall) ||
+    Number.isNaN(preschoolLarge) ||
+    Number.isNaN(primarySmall) ||
+    Number.isNaN(primaryLarge)
   ) {
     return { success: false, message: "Enter valid rates for every tier." };
   }
@@ -151,12 +151,12 @@ export async function saveRateCard(
   const supabase = await createClient();
   const { error } = await supabase.from("rate_card").upsert(
     [
-      { level: "preschool", group_size: 1, rate: preschool1 },
-      { level: "preschool", group_size: 2, rate: preschool2 },
-      { level: "primary", group_size: 1, rate: primary1 },
-      { level: "primary", group_size: 2, rate: primary2 },
+      { level: "preschool", bucket: "small", rate: preschoolSmall },
+      { level: "preschool", bucket: "large", rate: preschoolLarge },
+      { level: "primary", bucket: "small", rate: primarySmall },
+      { level: "primary", bucket: "large", rate: primaryLarge },
     ],
-    { onConflict: "level,group_size" },
+    { onConflict: "level,bucket" },
   );
 
   if (error) return { success: false, message: "Failed to save rates." };

@@ -89,8 +89,8 @@ export default async function SchedulePage() {
               </Field>
               <Field label="Group size">
                 <Select name="group_size">
-                  <option value="1">1:1</option>
-                  <option value="2">1:2</option>
+                  <option value="small">1:1</option>
+                  <option value="large">1:X</option>
                 </Select>
               </Field>
               <Field label="Day">

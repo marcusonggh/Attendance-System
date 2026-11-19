@@ -110,9 +110,9 @@ export function EnrollmentGroups({ groups }: { groups: Group[] }) {
                       </Select>
                     </Field>
                     <Field label="Group size">
-                      <Select name="group_size" defaultValue={String(enrollment.group_size)}>
-                        <option value="1">1:1</option>
-                        <option value="2">1:2</option>
+                      <Select name="group_size" defaultValue={enrollment.group_size}>
+                        <option value="small">1:1</option>
+                        <option value="large">1:X</option>
                       </Select>
                     </Field>
                     <Field label="Day">

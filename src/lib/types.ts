@@ -19,6 +19,18 @@ export type Subject = (typeof SUBJECTS)[number]["value"];
 
 export type Level = "preschool" | "primary";
 
+// Billing (and the enrollment form itself) only ever distinguishes two
+// categories: "small" (1:1 private, or 1:2 priced the same as 1:1) and
+// "large" (1:3/1:4, priced differently from small). The exact headcount of
+// a group class isn't stored anywhere — it's an emergent property of how
+// many enrollments share the same day/time/subject/level/location slot
+// (see groupPairedEnrollments in src/lib/rateCard.ts).
+export type GroupBucket = "small" | "large";
+export const GROUP_BUCKET_LABELS: Record<GroupBucket, string> = {
+  small: "1:1",
+  large: "1:X",
+};
+
 export type DurationHours = 0.5 | 0.75 | 1 | 1.5 | 2;
 
 export const DURATION_OPTIONS: { value: DurationHours; label: string }[] = [
@@ -34,7 +46,7 @@ export interface Enrollment {
   student_id: string;
   subject: Subject;
   level: Level;
-  group_size: 1 | 2;
+  group_size: GroupBucket;
   day_of_week: number;
   start_time: string;
   duration_hours: DurationHours;
@@ -47,16 +59,16 @@ export interface Enrollment {
 
 export interface RateCard {
   level: Level;
-  group_size: 1 | 2;
+  bucket: GroupBucket;
   rate: number;
 }
 
-// A student's own rate for a tier (level + group size), overriding the
+// A student's own rate for a tier (level + group bucket), overriding the
 // RateCard default for every one of their enrollments in that tier.
 export interface StudentRate {
   student_id: string;
   level: Level;
-  group_size: 1 | 2;
+  bucket: GroupBucket;
   rate: number;
 }
 

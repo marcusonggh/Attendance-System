@@ -5,23 +5,33 @@ import {
   type ClassSession,
   type DurationHours,
   type Enrollment,
+  type GroupBucket,
+  GROUP_BUCKET_LABELS,
   type Level,
   type RateCard,
   type StudentRate,
 } from "./types";
 
-export function getRate(
+export function getBucketRate(
   rateCard: RateCard[],
   level: Level,
-  groupSize: 1 | 2,
+  bucket: GroupBucket,
 ): number {
-  return (
-    rateCard.find((r) => r.level === level && r.group_size === groupSize)
-      ?.rate ?? 0
+  return rateCard.find((r) => r.level === level && r.bucket === bucket)?.rate ?? 0;
+}
+
+export function getBucketOverride(
+  studentRates: StudentRate[],
+  studentId: string,
+  level: Level,
+  bucket: GroupBucket,
+): StudentRate | undefined {
+  return studentRates.find(
+    (r) => r.student_id === studentId && r.level === level && r.bucket === bucket,
   );
 }
 
-// A student's own rate for this tier (if set) overrides the level/group_size
+// A student's own rate for this tier (if set) overrides the level/bucket
 // default for every one of their enrollments in that tier. The tier rate is
 // defined per 1-hour class, so it scales with the enrollment's actual
 // duration — a 1.5 hour class costs 1.5x, a 45-minute class costs 0.75x.
@@ -30,15 +40,15 @@ export function getEffectiveRate(
   rateCard: RateCard[],
   enrollment: Enrollment,
 ): number {
-  const override = studentRates.find(
-    (r) =>
-      r.student_id === enrollment.student_id &&
-      r.level === enrollment.level &&
-      r.group_size === enrollment.group_size,
+  const override = getBucketOverride(
+    studentRates,
+    enrollment.student_id,
+    enrollment.level,
+    enrollment.group_size,
   );
   const baseRate = override
     ? Number(override.rate)
-    : getRate(rateCard, enrollment.level, enrollment.group_size);
+    : getBucketRate(rateCard, enrollment.level, enrollment.group_size);
   return baseRate * enrollment.duration_hours;
 }
 
@@ -46,8 +56,8 @@ export function subjectLabel(subject: string): string {
   return SUBJECTS.find((s) => s.value === subject)?.label ?? subject;
 }
 
-export function groupSizeLabel(groupSize: 1 | 2): string {
-  return `1:${groupSize}`;
+export function groupSizeLabel(bucket: GroupBucket): string {
+  return GROUP_BUCKET_LABELS[bucket];
 }
 
 export function formatTimeRange(
@@ -77,26 +87,24 @@ export function sessionTimeRange(
   );
 }
 
-// Two 1:2 enrollments are the "same class" if they share every detail of
-// the slot — there's no actual link between them in the data model, just
-// convention, so this is a best-effort match used purely for display
-// (combining them into one card instead of two identical-looking ones).
+// Several 1:2/1:3/1:4 enrollments are the "same class" if they share every
+// detail of the slot — there's no actual link between them in the data
+// model, just convention, so this is a best-effort match used purely for
+// display (combining them into one card instead of several identical-
+// looking ones).
 function pairingKey(e: Enrollment): string {
   return `${e.day_of_week}|${e.start_time}|${e.subject}|${e.level}|${e.location}`;
 }
 
-// Groups enrollments that look like the same shared 1:2 class together,
-// preserving the input order otherwise. Each result is 1 item (no match, or
-// group_size 1) or 2+ items (a matched group — normally 2, but matches
-// however many share the slot).
+// Groups enrollments that look like the same shared group class together,
+// preserving the input order otherwise. Each result is 1 item (a solo
+// enrollment with no match) or 2+ items (a matched group — however many
+// share the slot). There's no declared headcount to defer to — a genuine
+// solo class simply won't match any other enrollment's slot.
 export function groupPairedEnrollments<T extends Enrollment>(items: T[]): T[][] {
   const output: T[][] = [];
   const pending = new Map<string, T[]>();
   for (const item of items) {
-    if (item.group_size !== 2) {
-      output.push([item]);
-      continue;
-    }
     const key = pairingKey(item);
     const existing = pending.get(key);
     if (existing) {

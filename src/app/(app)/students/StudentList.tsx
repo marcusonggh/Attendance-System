@@ -3,11 +3,20 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import Link from "next/link";
-import type { Level, RateCard, Student, StudentRate, Enrollment } from "@/lib/types";
+import {
+  GROUP_BUCKET_LABELS,
+  type GroupBucket,
+  type Level,
+  type RateCard,
+  type Student,
+  type StudentRate,
+  type Enrollment,
+} from "@/lib/types";
 import {
   formatDayTime,
+  getBucketOverride,
+  getBucketRate,
   getEffectiveRate,
-  getRate,
   groupSizeLabel,
   subjectLabel,
 } from "@/lib/rateCard";
@@ -18,11 +27,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Field, inputClass } from "@/components/ui/Field";
 import { ActionForm } from "@/components/ui/ActionForm";
 
-const ALL_TIERS: { level: Level; groupSize: 1 | 2 }[] = [
-  { level: "preschool", groupSize: 1 },
-  { level: "preschool", groupSize: 2 },
-  { level: "primary", groupSize: 1 },
-  { level: "primary", groupSize: 2 },
+const ALL_TIERS: { level: Level; bucket: GroupBucket }[] = [
+  { level: "preschool", bucket: "small" },
+  { level: "preschool", bucket: "large" },
+  { level: "primary", bucket: "small" },
+  { level: "primary", bucket: "large" },
 ];
 
 export function StudentList({
@@ -122,25 +131,20 @@ export function StudentList({
                 Rates
               </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {ALL_TIERS.map(({ level, groupSize }) => {
-                  const override = studentRates.find(
-                    (r) =>
-                      r.student_id === student.id &&
-                      r.level === level &&
-                      r.group_size === groupSize,
-                  );
-                  const defaultRate = getRate(rateCard, level, groupSize);
+                {ALL_TIERS.map(({ level, bucket }) => {
+                  const override = getBucketOverride(studentRates, student.id, level, bucket);
+                  const defaultRate = getBucketRate(rateCard, level, bucket);
                   return (
                     <ActionForm
-                      key={`${level}-${groupSize}`}
+                      key={`${level}-${bucket}`}
                       action={saveStudentRate}
                       className="flex items-end gap-1.5"
                     >
                       <input type="hidden" name="student_id" value={student.id} />
                       <input type="hidden" name="level" value={level} />
-                      <input type="hidden" name="group_size" value={groupSize} />
+                      <input type="hidden" name="bucket" value={bucket} />
                       <Field
-                        label={`${level === "preschool" ? "Preschool" : "Primary"} ${groupSizeLabel(groupSize)}`}
+                        label={`${level === "preschool" ? "Preschool" : "Primary"} ${GROUP_BUCKET_LABELS[bucket]}`}
                         className="flex-1"
                       >
                         <input

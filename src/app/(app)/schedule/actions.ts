@@ -48,7 +48,7 @@ export async function addEnrollment(
   const studentId = String(formData.get("student_id") ?? "");
   const subject = String(formData.get("subject") ?? "") as Subject;
   const level = String(formData.get("level") ?? "") as Level;
-  const groupSize = Number(formData.get("group_size"));
+  const groupSize = String(formData.get("group_size") ?? "");
   const dayOfWeek = Number(formData.get("day_of_week"));
   const startTime = parseStartTime(formData);
   const durationHours = parseDuration(formData);
@@ -59,7 +59,7 @@ export async function addEnrollment(
     !studentId ||
     !subject ||
     (level !== "preschool" && level !== "primary") ||
-    (groupSize !== 1 && groupSize !== 2) ||
+    (groupSize !== "small" && groupSize !== "large") ||
     Number.isNaN(dayOfWeek) ||
     dayOfWeek < 0 ||
     dayOfWeek > 6 ||
@@ -97,7 +97,7 @@ export async function updateEnrollment(
   const id = String(formData.get("id") ?? "");
   const subject = String(formData.get("subject") ?? "") as Subject;
   const level = String(formData.get("level") ?? "") as Level;
-  const groupSize = Number(formData.get("group_size"));
+  const groupSize = String(formData.get("group_size") ?? "");
   const dayOfWeek = Number(formData.get("day_of_week"));
   const startTime = parseStartTime(formData);
   const durationHours = parseDuration(formData);
@@ -108,7 +108,7 @@ export async function updateEnrollment(
     !id ||
     !subject ||
     (level !== "preschool" && level !== "primary") ||
-    (groupSize !== 1 && groupSize !== 2) ||
+    (groupSize !== "small" && groupSize !== "large") ||
     Number.isNaN(dayOfWeek) ||
     dayOfWeek < 0 ||
     dayOfWeek > 6 ||

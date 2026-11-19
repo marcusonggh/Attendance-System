@@ -1,7 +1,7 @@
 import { DollarSign, UserPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Enrollment, RateCard, Student, StudentRate } from "@/lib/types";
-import { getRate } from "@/lib/rateCard";
+import { GROUP_BUCKET_LABELS, type Enrollment, type RateCard, type Student, type StudentRate } from "@/lib/types";
+import { getBucketRate } from "@/lib/rateCard";
 import { addStudent, saveRateCard } from "./actions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -11,10 +11,30 @@ import { ActionForm } from "@/components/ui/ActionForm";
 import { StudentList } from "./StudentList";
 
 const RATE_TIERS = [
-  { level: "preschool" as const, groupSize: 1 as const, label: "Preschool 1:1", name: "rate_preschool_1" },
-  { level: "preschool" as const, groupSize: 2 as const, label: "Preschool 1:2", name: "rate_preschool_2" },
-  { level: "primary" as const, groupSize: 1 as const, label: "Primary 1:1", name: "rate_primary_1" },
-  { level: "primary" as const, groupSize: 2 as const, label: "Primary 1:2", name: "rate_primary_2" },
+  {
+    level: "preschool" as const,
+    bucket: "small" as const,
+    label: `Preschool ${GROUP_BUCKET_LABELS.small}`,
+    name: "rate_preschool_small",
+  },
+  {
+    level: "preschool" as const,
+    bucket: "large" as const,
+    label: `Preschool ${GROUP_BUCKET_LABELS.large}`,
+    name: "rate_preschool_large",
+  },
+  {
+    level: "primary" as const,
+    bucket: "small" as const,
+    label: `Primary ${GROUP_BUCKET_LABELS.small}`,
+    name: "rate_primary_small",
+  },
+  {
+    level: "primary" as const,
+    bucket: "large" as const,
+    label: `Primary ${GROUP_BUCKET_LABELS.large}`,
+    name: "rate_primary_large",
+  },
 ];
 
 export default async function StudentsPage() {
@@ -71,7 +91,7 @@ export default async function StudentsPage() {
       <section>
         <PageHeader
           title="Default Rates"
-          description="Flat monthly rate per level and group size, shared by every student unless a student has their own rate for that tier (set on their card above)."
+          description="Flat monthly rate per level and group size — 1:1/1:2 share one rate and 1:3/1:4 share another. Shared by every student unless a student has their own rate for that tier (set on their card above)."
         />
         <ActionForm action={saveRateCard} className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -88,7 +108,7 @@ export default async function StudentsPage() {
                     step="0.01"
                     min="0"
                     required
-                    defaultValue={getRate(rateCard, tier.level, tier.groupSize)}
+                    defaultValue={getBucketRate(rateCard, tier.level, tier.bucket)}
                     className={`w-full ${inputClass}`}
                   />
                 </Field>
