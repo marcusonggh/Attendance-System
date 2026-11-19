@@ -16,12 +16,13 @@ import { Card } from "@/components/ui/Card";
 
 interface Props {
   attendanceOverTime: { date: string; rate: number }[];
-  revenue: { month: string; paid: number; unpaid: number }[];
+  revenue: { month: string; paid: number; unpaid: number; projected: number }[];
 }
 
 const TEAL = "#0d9488";
 const GREEN = "#16a34a";
 const AMBER = "#d97706";
+const SLATE = "#94a3b8";
 
 export default function DashboardCharts({ attendanceOverTime, revenue }: Props) {
   return (
@@ -83,6 +84,13 @@ export default function DashboardCharts({ attendanceOverTime, revenue }: Props) 
                   name="Unpaid"
                   stackId="a"
                   fill={AMBER}
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="projected"
+                  name="Projected (not yet invoiced)"
+                  stackId="a"
+                  fill={SLATE}
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>

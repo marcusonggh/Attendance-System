@@ -1,8 +1,15 @@
 import { addMonths, endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { overlapsMonth } from "@/lib/rateCard";
-import type { Student, ClassSession, Enrollment, Invoice } from "@/lib/types";
+import { getEffectiveRate, overlapsMonth } from "@/lib/rateCard";
+import type {
+  Student,
+  ClassSession,
+  Enrollment,
+  Invoice,
+  RateCard,
+  StudentRate,
+} from "@/lib/types";
 import DashboardCharts from "./DashboardCharts";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -73,6 +80,8 @@ export default async function DashboardPage({
     { data: studentsData },
     { data: invoiceRows },
     { data: enrollmentData },
+    { data: rateCardData },
+    { data: studentRateData },
   ] = await Promise.all([
     supabase.from("sessions").select("*").gte("date", sinceStr).order("date"),
     supabase
@@ -83,6 +92,8 @@ export default async function DashboardPage({
     supabase.from("students").select("*").order("name"),
     supabase.from("invoices").select("*").order("year_month"),
     supabase.from("enrollments").select("*"),
+    supabase.from("rate_card").select("*"),
+    supabase.from("student_rates").select("*"),
   ]);
 
   // Rescheduled slots didn't actually happen on their original date — they
@@ -97,6 +108,8 @@ export default async function DashboardPage({
   const allStudents = (studentsData ?? []) as Student[];
   const invoices = (invoiceRows ?? []) as Invoice[];
   const enrollments = (enrollmentData ?? []) as Enrollment[];
+  const rateCard = (rateCardData ?? []) as RateCard[];
+  const studentRates = (studentRateData ?? []) as StudentRate[];
   const studentIdByEnrollmentId = new Map(
     enrollments.map((e) => [e.id, e.student_id]),
   );
@@ -143,19 +156,44 @@ export default async function DashboardPage({
     })
     .sort((a, b) => b.rate - a.rate);
 
-  const revenueByMonth = new Map<string, { paid: number; unpaid: number }>();
+  const revenueByMonth = new Map<
+    string,
+    { paid: number; unpaid: number; projected: number }
+  >();
   for (const invoice of invoices) {
     const entry = revenueByMonth.get(invoice.year_month) ?? {
       paid: 0,
       unpaid: 0,
+      projected: 0,
     };
     if (invoice.status === "paid") entry.paid += Number(invoice.amount_owed);
     else entry.unpaid += Number(invoice.amount_owed);
     revenueByMonth.set(invoice.year_month, entry);
   }
+
+  // Before a month's invoices are finalized there's nothing in `invoices`
+  // yet to chart — fall back to what each active student's enrollments
+  // would bill at today's rates, so the dashboard still shows a number
+  // instead of a blank chart.
+  const monthInvoices = invoices.filter((inv) => inv.year_month === month);
+  const monthIsFinalized = monthInvoices.length > 0;
+  const projectedRevenue = enrollments
+    .filter((e) => e.active && overlapsMonth(e, monthStartStr, monthEndStr))
+    .reduce((sum, e) => sum + getEffectiveRate(studentRates, rateCard, e), 0);
+
+  if (!monthIsFinalized) {
+    const entry = revenueByMonth.get(month) ?? {
+      paid: 0,
+      unpaid: 0,
+      projected: 0,
+    };
+    entry.projected = projectedRevenue;
+    revenueByMonth.set(month, entry);
+  }
+
   const revenue = Array.from(revenueByMonth.entries())
     .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([m, { paid, unpaid }]) => ({ month: m, paid, unpaid }));
+    .map(([m, { paid, unpaid, projected }]) => ({ month: m, paid, unpaid, projected }));
 
   const monthPresent = monthSessions.filter((s) => s.status === "present").length;
   const attendanceRate =
@@ -167,13 +205,14 @@ export default async function DashboardPage({
     .filter((s) => s.total >= MIN_SESSIONS_TO_FLAG && s.rate < LOW_ATTENDANCE_THRESHOLD)
     .sort((a, b) => a.rate - b.rate);
 
-  const monthInvoices = invoices.filter((inv) => inv.year_month === month);
   const collected = monthInvoices
     .filter((i) => i.status === "paid")
     .reduce((sum, i) => sum + Number(i.amount_owed), 0);
-  const outstanding = monthInvoices
-    .filter((i) => i.status === "unpaid")
-    .reduce((sum, i) => sum + Number(i.amount_owed), 0);
+  const outstanding = monthIsFinalized
+    ? monthInvoices
+        .filter((i) => i.status === "unpaid")
+        .reduce((sum, i) => sum + Number(i.amount_owed), 0)
+    : projectedRevenue;
 
   return (
     <div className="space-y-6">
@@ -211,7 +250,7 @@ export default async function DashboardPage({
           tone="success"
         />
         <StatTile
-          label="Outstanding"
+          label={monthIsFinalized ? "Outstanding" : "Projected (not yet invoiced)"}
           value={`$${outstanding.toFixed(2)}`}
           tone="warning"
         />
